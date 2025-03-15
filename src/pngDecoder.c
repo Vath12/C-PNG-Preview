@@ -18,7 +18,6 @@ typedef struct ChunkData {
 
 ChunkData readChunk(unsigned char *stream,uint32_t ptr){
     ChunkData data = {0,{0,0,0,0},NULL,0};
-    printf("%u %u %u %u\n",stream[ptr],stream[ptr+1],stream[ptr+2],stream[ptr+3]);
     data.length = (stream[ptr] << 24) | (stream[ptr + 1] << 16) | (stream[ptr + 2] << 8) | (stream[ptr + 3]); // length
     ptr += 4;
     memcpy(data.code,&stream[ptr],4); // the chunk's 4 character ASCII identification
@@ -43,7 +42,7 @@ int readPNG(char path[]){
         return -2; // file is too small
     }
     //check MIME code
-    const char PNG_MIME[8] = {137,80,78,71,13,10,26,10};
+    const unsigned char PNG_MIME[8] = {137,80,78,71,13,10,26,10};
     for (int i = 0; i < 8; i++){
         if (rawData[i] != PNG_MIME[i]){
             return -3; // file is not a PNG
