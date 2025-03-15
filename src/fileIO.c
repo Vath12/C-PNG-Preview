@@ -14,7 +14,7 @@ int readFile(char filePath[],char** data,size_t* size){
     *size = ftell(filePointer);
     
     *data = (char*) malloc(*size);
-
+    
     if (*data == NULL){
         return 0;
     }
@@ -30,7 +30,7 @@ int readFile(char filePath[],char** data,size_t* size){
     return 1;
 }
 
-int fileWrite(char filePath[],char* data, size_t size){
+int writeFile(char filePath[],char* data, size_t size){
     FILE *filePointer = fopen(filePath,"wb");
 
     if (filePointer == NULL){

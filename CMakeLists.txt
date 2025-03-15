@@ -4,5 +4,5 @@ project(LearningC)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
-add_executable(main src/main.c src/fileIO.c)
+add_executable(main src/main.c src/fileIO.c src/inflate.c src/pngDecoder.c)
 
