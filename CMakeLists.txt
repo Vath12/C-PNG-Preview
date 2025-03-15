@@ -1,4 +1,8 @@
 cmake_minimum_required(VERSION 3.1)
 project(LearningC)
-add_executable(main src/main.c)
+
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+
+add_executable(main src/main.c src/fileIO.c)
 
