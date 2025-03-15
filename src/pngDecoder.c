@@ -5,6 +5,7 @@
 #include <string.h>
 
 
+
 //http://www.libpng.org/pub/png/spec/1.2/PNG-Structure.html
 
 
@@ -15,8 +16,9 @@ typedef struct ChunkData {
     uint32_t CRC;
 } ChunkData;
 
-ChunkData readChunk(char *stream,uint64_t ptr){
+ChunkData readChunk(unsigned char *stream,uint32_t ptr){
     ChunkData data = {0,{0,0,0,0},NULL,0};
+    printf("%u %u %u %u\n",stream[ptr],stream[ptr+1],stream[ptr+2],stream[ptr+3]);
     data.length = (stream[ptr] << 24) | (stream[ptr + 1] << 16) | (stream[ptr + 2] << 8) | (stream[ptr + 3]); // length
     ptr += 4;
     memcpy(data.code,&stream[ptr],4); // the chunk's 4 character ASCII identification
@@ -31,7 +33,7 @@ ChunkData readChunk(char *stream,uint64_t ptr){
 }
 
 int readPNG(char path[]){
-    char* rawData;
+    unsigned char* rawData;
     size_t size;
     
     if (!readFile(path,&rawData,&size)){
@@ -48,11 +50,11 @@ int readPNG(char path[]){
         }
     }
 
-    uint64_t ptr = 8;
-
+    uint32_t ptr = 8;
     while (ptr < size){
         ChunkData c = readChunk(rawData,ptr);
-        printf("Chunk Code: %s span %d at %lld\n",c.code,c.length,(unsigned long long) ptr);
+        printf("Chunk Code: %c%c%c%c",c.code[0],c.code[1],c.code[2],c.code[3]);
+        printf(" span %u at %u\n",c.length,ptr);
         ptr += c.length + 12;
     }
 

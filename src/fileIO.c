@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int readFile(char filePath[],char** data,size_t* size){
+int readFile(char filePath[],unsigned char** data,size_t* size){
     FILE *filePointer = fopen(filePath,"rb");
 
     if (filePointer == NULL){
@@ -30,7 +30,7 @@ int readFile(char filePath[],char** data,size_t* size){
     return 1;
 }
 
-int writeFile(char filePath[],char* data, size_t size){
+int writeFile(char filePath[],unsigned char* data, size_t size){
     FILE *filePointer = fopen(filePath,"wb");
 
     if (filePointer == NULL){

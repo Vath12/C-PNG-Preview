@@ -7,8 +7,8 @@
 int main(){
 
     /*
-    char writeData[] = "qwertyuiop";
-    char *data;
+    unsigned char writeData[] = "qwertyuiop";
+    unsigned char *data;
     size_t dataSize = 0;
     (void*) writeFile("../resources/data.txt",&writeData[0],sizeof(writeData)-1);
     if (readFile("../resources/data.txt",&data,&dataSize)){
