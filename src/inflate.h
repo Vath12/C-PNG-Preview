@@ -15,5 +15,13 @@ works please read rfc 1951:
 https://www.rfc-editor.org/rfc/rfc1951
 */
 
+typedef struct BitStream{
+    uint8_t* buffer;
+    uint32_t byte; 
+    uint8_t bit;
+} BitStream;
 
-int inflate(uint8_t* stream,size_t size,uint8_t** output);
+uint8_t nextBit(BitStream *stream);
+uint32_t nextBits(BitStream *stream,int num);
+
+int inflate(uint8_t *buffer,size_t size,uint8_t **output);
