@@ -81,7 +81,8 @@ For this reason image data will not be uncompressed in parse IDAT
 and the IDAT struct will simply wrap the data stream
 */
 typedef struct IDAT{
-    uint8_t* data;
+    uint32_t size;
+    uint8_t* buffer;
 } IDAT;
 
 int parseIHDR(ChunkData* c, IHDR *output);

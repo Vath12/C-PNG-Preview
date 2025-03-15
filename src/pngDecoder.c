@@ -34,6 +34,7 @@ int readPNG(char path[]){
     uint32_t ptr = 8;
     IHDR header = {};
     IDAT data = {};
+    data.buffer = malloc(0);
     PLTE pallate = {};
     while (ptr < size){
         ChunkData c = readChunk(rawData,ptr);
@@ -42,7 +43,9 @@ int readPNG(char path[]){
         ptr += c.length + 12;
 
         if (strcmp(c.code,CHUNK_CODE_IDAT) == 0){
-            parseIDAT(&c,&data);
+           if (!parseIDAT(&c,&data)){
+                return -64;// out of memory  
+           }
         } else if (strcmp(c.code,CHUNK_CODE_IHDR) == 0){
             parseIHDR(&c,&header);
             printf("W:%d H:%d BitDepth:%d ColorType:%d compressionMethod:%d\n",
@@ -52,6 +55,8 @@ int readPNG(char path[]){
         }
         
     }
+    printf("IDAT size: %dkb\n",data.size/1000);
+    free(data.buffer);
 
     free(rawData);
     return 1;

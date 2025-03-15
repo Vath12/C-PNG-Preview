@@ -53,7 +53,15 @@ int parseIHDR(ChunkData* c, IHDR *output){
     return 1;
 }
 int parseIDAT(ChunkData* c, IDAT *output){
-    revmemcpy(output,c->chunkData,c->length);
+    uint8_t* resizedBuffer = malloc(output->size + c->length);
+    if (resizedBuffer == NULL){
+        return -1;
+    }
+    memcpy(resizedBuffer,output->buffer,output->size);
+    revmemcpy(resizedBuffer+output->size,c->chunkData,c->length);
+    free(output->buffer);
+    output->size = output->size+c->length;
+    output->buffer = resizedBuffer;
     return 1;
 }
 int parsePLTE(ChunkData* c, PLTE *output){
