@@ -24,7 +24,9 @@ int inflate(uint8_t* stream,size_t size,uint8_t** output){
         return -4; //compression method is unsupported
     }
 
-    uint32_t ptr = 2;
+    uint32_t bytePtr = 2;
+    uint8_t bitPtr = 0;
+
     uint32_t slidingWindowSize = 1 << compressionInfo;
     uint8_t* slidingWindow = malloc((size_t) slidingWindow);
     if (dictionaryPresent){
@@ -48,24 +50,29 @@ int inflate(uint8_t* stream,size_t size,uint8_t** output){
     }
 
     uint8_t isLastBlock = 0;
+    
+
 
     while (!isLastBlock){
-        isLastBlock = (stream[ptr] & 0b10000000) >> 7;
-        uint8_t blockType = (stream[ptr] & 0b01100000) >> 5;
+
+        //TODO: handle the block not being on a byte boundary
+        isLastBlock = (stream[bytePtr] & 0b10000000) >> 7;
+        uint8_t blockType = (stream[bytePtr] & 0b01100000) >> 5;
+
         printf("Block Type: %d \n",blockType);
         switch(blockType){
             case 0b00: //No compression
-                ptr+=1;
-                uint16_t length = stream[ptr]<<8 | stream[ptr+1];
-                ptr+=2;
-                uint16_t lengthCheck = stream[ptr]<<8 | stream[ptr+1];
+                bytePtr+=1;
+                uint16_t length = stream[bytePtr]<<8 | stream[bytePtr+1];
+                bytePtr+=2;
+                uint16_t lengthCheck = stream[bytePtr]<<8 | stream[bytePtr+1];
 
                 if (length != !lengthCheck){
                     return -5; //length is corrupted
                 }
 
                 //TODO: copy length bytes from stream to output
-                ptr += length;
+                bytePtr += length;
 
                 break;
             case 0b01://fixed huffman codes
