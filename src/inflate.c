@@ -66,17 +66,23 @@ int inflate(uint8_t *buffer,size_t size,uint8_t **output){
         printf("Block Type: %x \n",blockType);
         switch(blockType){
             case 0b00: //No compression
+                {
                 break;
+                }
             case 0b01://fixed huffman codes
+                { 
                 printf("fixed huffman\n");
                 break;
+                }
             case 0b10://dynamic huffman codes
+                {
                 printf("dynamic huffman\n");
                 break; 
+                }
             case 0b11:
                 return -100; //reserved type (something has gone really bad)
         }
     }
-    
+
     return 1;
 }
