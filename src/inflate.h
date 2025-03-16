@@ -19,6 +19,27 @@ https://www.rfc-editor.org/rfc/rfc1951
 get bit n from a bitstream
 reads bytes MSB first!
 */
+
+typedef struct BlockStore{
+    uint8_t length;
+    uint8_t *bitstream;
+} BlockStore;
+
+typedef struct BlockFixedHuffman{
+    uint8_t *bitstream;
+} BlockFixedHuffman;
+
+typedef struct BlockDynamicHuffman{
+    uint8_t *bitstream;
+} BlockDynamicHuffman;
+
 uint8_t getBit(uint8_t *buffer,uint64_t position);
+//used for reading deflate bit sequences
+uint32_t getBitsMSB(uint8_t *buffer,uint64_t position,uint8_t num);
+//used for reading deflate numbers
+uint32_t getBitsLSB(uint8_t *buffer,uint64_t position,uint8_t num);
+
+
+BlockStore getBlockStore(uint8_t *buffer,uint64_t position);
 
 int inflate(uint8_t *buffer,size_t size,uint8_t **output);
