@@ -21,6 +21,15 @@ typedef struct BitStream{
     uint8_t bit;
 } BitStream;
 
+typedef struct DeflateHeader{
+    uint8_t compressionMethod;
+    uint8_t compressionInfo;
+    uint8_t hasDictionary;
+    uint8_t compressionLevel;
+    uint8_t isValid;
+} DeflateHeader;
+
+DeflateHeader readHeader(uint8_t *buffer);
 uint8_t nextBit(BitStream *stream);
 uint32_t nextBits(BitStream *stream,int num);
 

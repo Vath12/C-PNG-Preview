@@ -37,24 +37,37 @@ int decodeBlock(BitStream *stream, uint8_t *block){
     return -1;
 }
 
+DeflateHeader readHeader(uint8_t *buffer){
+    DeflateHeader output = {};
+
+    uint16_t check = (buffer[0] << 4) + buffer[1];
+    output.isValid = check % 31 == 0;
+
+    //CINFO
+    output.compressionMethod = (buffer[0] & 0b00001111);
+    output.compressionInfo = (buffer[0] & 0b11110000) >> 4;
+    //FLAGS
+    output.hasDictionary = (buffer[1] & 0b00000100) >> 3;
+    output.compressionLevel = (buffer[1] & 0b00000011);
+
+    return output;
+}
+
 int inflate(uint8_t *buffer,size_t size,uint8_t **output){
-    uint8_t compressionInfo = 7;
-
-    BitStream stream = {};
-    stream.buffer = buffer;
-    stream.byte = 0;
-    stream.bit = 0;
-
-    printf("read buffer: ");
-    for (int i = 0; i < 5;i++){
-        for (int k = 0; k < 8;k++){
-            printf("%d", nextBit(&stream));
-        }
-        printf(" ");
+    if (size < 16){
+        return -1; //too few bytes
     }
-    printf("\n");
-    stream.byte = 0;
-    stream.bit = 0;
+    BitStream stream = {buffer,2,0};
+    
+    DeflateHeader header = readHeader(buffer);
+
+    printf("header: CM: %d CINFO: %d DICT: %d CLEVEL: %d VALID: %d\n",
+    header.compressionMethod,
+    header.compressionInfo,
+    header.hasDictionary,
+    header.compressionLevel,
+    header.isValid);
+
 
     uint8_t isLastBlock = 0;
     
