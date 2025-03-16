@@ -1,4 +1,4 @@
-#include "canonicalPrefixGen.h"
+#include "canonicalPrefix.h"
 #include <stdio.h>
 #include <stdlib.h>
 

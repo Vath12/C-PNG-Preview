@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "fileIO.h"
-#include "canonicalPrefixGen.h"
+#include "canonicalPrefix.h"
 #include "inflate.h"
 #include "pngDecoder.h"
 #include "inflate.h"
