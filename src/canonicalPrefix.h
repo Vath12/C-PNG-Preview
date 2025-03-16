@@ -46,3 +46,6 @@ int generateCodes(CPrefixCodeTable* table);
 
 uint8_t getExtraLengthCodeBits(uint16_t length);
 uint32_t getLengthOffset(uint16_t length,uint16_t extraBits);
+
+uint8_t getExtraDistanceBits(uint8_t distance);
+uint32_t getDistanceOffset(uint8_t distance,uint16_t extraBits);
