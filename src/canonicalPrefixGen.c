@@ -2,8 +2,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int compareLength(const void *A, const void *B){
-    return (*((CPrefixCode*)A)).length-(*((CPrefixCode*)B)).length;
+int max(a,b){
+    return a>b ? a:b;
+}
+
+
+int compareLengthValue(const void *A, const void *B){
+    int lengthDiff = ((*((CPrefixCode*)A)).length-(*((CPrefixCode*)B)).length);
+    if (lengthDiff != 0) {
+        return lengthDiff;
+    }
+    return ((*((CPrefixCode*)A)).value-(*((CPrefixCode*)B)).value);
 }
 
 int generateFixedLengthLiteralCodes(CPrefixCodeTable* output){
@@ -31,19 +40,60 @@ int generateFixedLengthLiteralCodes(CPrefixCodeTable* output){
     if (!generateCodes(output)){
         return -2; //code gen failed
     }
-
+    
     for (int i = 0; i < output->size;i++){
-        printf("%d %d %d\n",
+        printf("%4d %4d ",
             output->codes[i].length,
-            output->codes[i].code,
             output->codes[i].value);
+        for (int k = output->codes[i].length - 1; k >= 0;k--){
+            printf("%d",(output->codes[i].code >> k) & 0b1);
+        }
+        printf("\n");
     }
-
+    
     return 1;
 }
 
+//see rfc 1951 pg 7
 int generateCodes(CPrefixCodeTable* table){
-    //it would be really nice if qsort was stable...
-    qsort(&(table->codes[0]),table->size,sizeof(CPrefixCode),compareLength);
+    //sort by length and value
+    qsort(&(table->codes[0]),table->size,sizeof(CPrefixCode),compareLengthValue);
+    //count the number of distinct lengths present
+    uint8_t maxLength = 0;
+    for (int i = 0; i < table->size;i++){
+        maxLength = max(maxLength,table->codes[i].length);
+    }
+    //allocate extra elem bc codes with length 0 are the 0th element
+    uint16_t *lengths = calloc(maxLength+1,sizeof(uint16_t));
+    uint32_t *next_code = calloc(maxLength+1,sizeof(uint32_t));
+
+    if (lengths == NULL){
+        return -1; //out of memory
+    }
+    //count codes with length N
+    for (int i = 0; i < table->size;i++){
+        lengths[table->codes[i].length] += 1;
+    }
+    //initialize codes
+    uint32_t code = 0;
+    for (int i = 1; i <= maxLength;i++){
+        code = (code + lengths[i-1]) << 1;
+        next_code[i] = code;
+    }
+    for (int i = 0; i <= maxLength;i++){
+        printf("NumCodes of Length: %d : %d start : %d\n",i,lengths[i],next_code[i]);
+    }
+    //assign codes to all literals
+    for (int i = 0; i < table->size;i++){
+        //only assign codes with nonzero length
+        if (table->codes[i].length > 0){
+            table->codes[i].code = next_code[table->codes[i].length]++;
+        }
+    }
+    
+
+
+    free(lengths);
+
     return 1;
 }
