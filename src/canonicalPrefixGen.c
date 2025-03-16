@@ -6,14 +6,24 @@ int max(a,b){
     return a>b ? a:b;
 }
 
+int compareValue(const void *A, const void *B)
+{
+    return ((*((CPrefixCode*)A)).value-(*((CPrefixCode*)B)).value);
+}
+
+int compareLength(const void *A, const void *B)
+{
+    return ((*((CPrefixCode*)A)).length-(*((CPrefixCode*)B)).length);
+}
 
 int compareLengthValue(const void *A, const void *B){
-    int lengthDiff = ((*((CPrefixCode*)A)).length-(*((CPrefixCode*)B)).length);
+    int lengthDiff = compareLength(A,B);
     if (lengthDiff != 0) {
         return lengthDiff;
     }
-    return ((*((CPrefixCode*)A)).value-(*((CPrefixCode*)B)).value);
+    return compareValue(A,B);
 }
+
 
 int generateFixedLengthLiteralCodes(CPrefixCodeTable* output){
 
@@ -26,6 +36,7 @@ int generateFixedLengthLiteralCodes(CPrefixCodeTable* output){
 
     for (uint16_t i = 0; i < 286;i++){
         output->codes[i].value = i;
+        
         output->codes[i].code = 0;
         if (i <= 143){
             output->codes[i].length = 8;
@@ -36,7 +47,9 @@ int generateFixedLengthLiteralCodes(CPrefixCodeTable* output){
         } else {
             output->codes[i].length = 9;
         }
+        
     }
+
     if (!generateCodes(output)){
         return -2; //code gen failed
     }
@@ -67,7 +80,7 @@ int generateCodes(CPrefixCodeTable* table){
     uint16_t *lengths = calloc(maxLength+1,sizeof(uint16_t));
     uint32_t *next_code = calloc(maxLength+1,sizeof(uint32_t));
 
-    if (lengths == NULL){
+    if (lengths == NULL | next_code == NULL){
         return -1; //out of memory
     }
     //count codes with length N
@@ -90,9 +103,10 @@ int generateCodes(CPrefixCodeTable* table){
             table->codes[i].code = next_code[table->codes[i].length]++;
         }
     }
-    
+    //sort by value for better lookup
+    qsort(&(table->codes[0]),table->size,sizeof(CPrefixCode),compareValue);
 
-
+    free(next_code);
     free(lengths);
 
     return 1;
