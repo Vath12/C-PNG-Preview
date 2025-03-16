@@ -6,7 +6,7 @@
 
 uint8_t nextBit(BitStream *stream){
     uint8_t out = (stream->buffer)[stream->byte];
-    out = (out >> stream->bit) & 0b1;
+    out = (out >> (7-stream->bit) ) & 0b1;
     stream->bit++;
     if (stream->bit > 7){
         stream->bit = 0;
@@ -18,8 +18,8 @@ uint8_t nextBit(BitStream *stream){
 uint32_t nextBits(BitStream *stream,int num){
     uint32_t out = 0;
     for (int i = 0; i < num; i++){
-        out |= nextBit(stream);
         out <<= 1;
+        out |= nextBit(stream);
     }
     return out;
 }
