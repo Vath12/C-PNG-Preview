@@ -129,3 +129,15 @@ int generateCodes(CPrefixCodeTable* table){
 
     return 1;
 }
+//see rfc section 3.2.5 (page 11)
+uint8_t getExtraLengthCodeBits(uint16_t length){
+    if (length <= 256){
+        return 0;
+    }
+    return extraBitsLength[length-257];
+}
+//see rfc section 3.2.5 (page 11)
+uint32_t getLengthOffset(uint16_t length,uint16_t extraBits){
+    return extraBitsLength[length-257];
+}
+
