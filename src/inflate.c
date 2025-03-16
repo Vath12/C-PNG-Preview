@@ -36,7 +36,31 @@ int inflate(uint8_t *buffer,size_t size,uint8_t **output){
 
     //read header
     uint8_t isLast = getBit(buffer,ptr++);
+    //read block type
+    uint8_t blockType = (uint8_t) getBitsLSB(buffer,ptr,2);
+    ptr+=2;
+    printf("isLast: %d blockType: %d\n",isLast,blockType);
 
+    switch (blockType){
+        case 0: //uncompressed block (store)
+            ptr += 5; //padding
+            uint16_t length = getBitsLSB(buffer,ptr,16);
+            ptr+=16;
+            uint16_t lengthComplement = getBitsLSB(buffer,ptr,16);
+            if (length != ~lengthComplement){
+                printf("block length did not match check value");
+                return -2; 
+            }
+            break;
+        case 1: //block compressed with fixed huffman codes
+            break; 
+        case 2: //block compressed with dynamic huffman codes
+            break; 
+        case 3:
+            printf("invalid block type\n");
+            return -1;
+
+    }
 
     return 1;
 }
