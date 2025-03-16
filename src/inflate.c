@@ -2,6 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/*
+TODO:
+    Implement LZSS sliding window using 32kb ring buffer
+    Utilize canonicalPrefix table to parse the bitstream
+    Parse prefix code lengths and generate CPrefixCodeTable in dynamic mode
+*/
 
 uint8_t getBit(uint8_t *buffer,uint64_t position){
     return (buffer[position/8] >> (7 - (position%8))) & 0b1;
