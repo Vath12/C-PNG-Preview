@@ -31,6 +31,10 @@ int main(){
     CPrefixCodeTable y = {};
     generateFixedLengthLiteralCodes(&x);
     generateFixedLengthDistanceCodes(&y);
+
+    deallocateCPrefixCodeTable(&x);
+    deallocateCPrefixCodeTable(&y);
+
     return 0;
 
 }   

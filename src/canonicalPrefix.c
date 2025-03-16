@@ -8,12 +8,12 @@ int max(a,b){
 
 int compareValue(const void *A, const void *B)
 {
-    return ((*((CPrefixCode*)A)).value-(*((CPrefixCode*)B)).value);
+    return (*((CPrefixCode*)A)).value - (*((CPrefixCode*)B)).value;
 }
 
 int compareLength(const void *A, const void *B)
 {
-    return ((*((CPrefixCode*)A)).length-(*((CPrefixCode*)B)).length);
+    return (*((CPrefixCode*)A)).length - (*((CPrefixCode*)B)).length;
 }
 
 int compareLengthValue(const void *A, const void *B){
@@ -24,7 +24,6 @@ int compareLengthValue(const void *A, const void *B){
     return compareValue(A,B);
 }
 
-
 int allocateCPrefixCodeTable(CPrefixCodeTable* output,uint16_t size){
     output->size = size;
     output->codes = malloc(output->size * sizeof(CPrefixCode));
@@ -32,6 +31,10 @@ int allocateCPrefixCodeTable(CPrefixCodeTable* output,uint16_t size){
         return -1; //out of memory
     }
     return 1;
+}
+
+void deallocateCPrefixCodeTable(CPrefixCodeTable* table){
+    free(table->codes);
 }
 
 int generateFixedLengthDistanceCodes(CPrefixCodeTable* output){
