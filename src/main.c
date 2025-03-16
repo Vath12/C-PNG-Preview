@@ -28,8 +28,9 @@ int main(){
     */
     
     CPrefixCodeTable x = {};
+    CPrefixCodeTable y = {};
     generateFixedLengthLiteralCodes(&x);
-
+    generateFixedLengthDistanceCodes(&y);
     return 0;
 
 }   

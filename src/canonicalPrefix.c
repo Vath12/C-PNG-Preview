@@ -25,12 +25,32 @@ int compareLengthValue(const void *A, const void *B){
 }
 
 
+int allocateCPrefixCodeTable(CPrefixCodeTable* output,uint16_t size){
+    output->size = size;
+    output->codes = malloc(output->size * sizeof(CPrefixCode));
+    if (output->codes == NULL){
+        return -1; //out of memory
+    }
+    return 1;
+}
+
+int generateFixedLengthDistanceCodes(CPrefixCodeTable* output){
+    if (!allocateCPrefixCodeTable(output,32)){
+        return -1; //out of memory
+    }
+    for (uint16_t i = 0; i < 32;i++){
+        output->codes[i].value = i;
+        output->codes[i].length = 5;
+    }
+    if (!generateCodes(output)){
+        return -2; //code generation failed
+    }
+    return 1;
+}
+
 int generateFixedLengthLiteralCodes(CPrefixCodeTable* output){
 
-    output->size = 286;
-    output->codes = malloc(output->size * sizeof(CPrefixCode));
-
-    if (output->codes == NULL){
+    if (!allocateCPrefixCodeTable(output,286)){
         return -1; //out of memory
     }
 
@@ -49,11 +69,9 @@ int generateFixedLengthLiteralCodes(CPrefixCodeTable* output){
         }
         
     }
-
     if (!generateCodes(output)){
-        return -2; //code gen failed
+        return -2; //code generation failed
     }
-    
     for (int i = 0; i < output->size;i++){
         printf("%4d %4d ",
             output->codes[i].length,
@@ -92,9 +110,6 @@ int generateCodes(CPrefixCodeTable* table){
     for (int i = 1; i <= maxLength;i++){
         code = (code + lengths[i-1]) << 1;
         next_code[i] = code;
-    }
-    for (int i = 0; i <= maxLength;i++){
-        printf("NumCodes of Length: %d : %d start : %d\n",i,lengths[i],next_code[i]);
     }
     //assign codes to all literals
     for (int i = 0; i < table->size;i++){

@@ -12,5 +12,9 @@ typedef struct CPrefixCodeTable{
     CPrefixCode *codes;
 } CPrefixCodeTable;
 
+int allocateCPrefixCodeTable(CPrefixCodeTable* output,uint16_t size);
+//see rfc 1951 section 3.2.6.
+int generateFixedLengthDistanceCodes(CPrefixCodeTable* output);
+//see rfc 1951 section 3.2.6.
 int generateFixedLengthLiteralCodes(CPrefixCodeTable* output);
 int generateCodes(CPrefixCodeTable* table);
