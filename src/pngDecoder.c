@@ -1,5 +1,6 @@
 #include "pngDecoder.h"
 #include "pngChunks.h"
+#include "inflate.h"
 #include "fileIO.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -56,6 +57,10 @@ int readPNG(char path[]){
         
     }
     printf("IDAT size: %dkb\n",data.size/1000);
+    uint8_t* uncompressed = malloc(0);
+    inflate(data.buffer,data.size,&uncompressed);
+    free(uncompressed);
+
     free(data.buffer);
 
     free(rawData);

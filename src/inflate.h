@@ -15,4 +15,10 @@ works please read rfc 1951:
 https://www.rfc-editor.org/rfc/rfc1951
 */
 
+/*
+get bit n from a bitstream
+reads bytes MSB first!
+*/
+uint8_t getBit(uint8_t *buffer,uint64_t position);
+
 int inflate(uint8_t *buffer,size_t size,uint8_t **output);
