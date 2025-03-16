@@ -43,14 +43,16 @@ int inflate(uint8_t *buffer,size_t size,uint8_t **output){
 
     switch (blockType){
         case 0: //uncompressed block (store)
-            ptr += 5; //padding
+            ptr = ((ptr/8) + 1)*8; //flush to byte
             uint16_t length = getBitsLSB(buffer,ptr,16);
             ptr+=16;
-            uint16_t lengthComplement = getBitsLSB(buffer,ptr,16);
-            if (length != ~lengthComplement){
+            uint16_t nlength = ~(getBitsLSB(buffer,ptr,16));
+            if (length != nlength){
                 printf("block length did not match check value");
                 return -2; 
             }
+            //TODO: write len number of bits from bitstream
+            ptr += length*8;
             break;
         case 1: //block compressed with fixed huffman codes
             break; 

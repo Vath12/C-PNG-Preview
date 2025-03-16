@@ -1,14 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "fileIO.h"
+#include "canonicalPrefixGen.h"
 #include "inflate.h"
 #include "pngDecoder.h"
 #include "inflate.h"
 
 int main(){
     
-    printf("readPNG exited with code: %d\n",readPNG("../resources/image.png"));
-    
+
+    //printf("readPNG exited with code: %d\n",readPNG("../resources/image.png"));
     /*
     uint8_t buffer[] = {5,193,1,1,0,0,8,195,32,110,255,206,19,68,210,77,194,3};
     
@@ -26,6 +27,8 @@ int main(){
     free(output);
     */
     
+    CPrefixCodeTable x = {};
+    generateFixedLengthLiteralCodes(&x);
 
     return 0;
 

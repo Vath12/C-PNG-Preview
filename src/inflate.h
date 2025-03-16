@@ -16,9 +16,19 @@ https://www.rfc-editor.org/rfc/rfc1951
 */
 
 /*
-get bit n from a bitstream
-reads bytes MSB first!
+Fixed Codes see rfc 1951 pg 11
+
+Length Literal
+0-255: literal byte values
+256: setinal, EOB marker
+257-285: length codes
+
+Distance
+There are 29 codes
+
 */
+
+static const uint16_t END_OF_BLOCK = 256;
 
 typedef struct BlockStore{
     uint8_t length;
