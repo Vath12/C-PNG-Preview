@@ -7,7 +7,7 @@
 
 int main(){
     //printf("readPNG exited with code: %d\n",readPNG("../resources/image.png"));
-    uint8_t buffer[] = {11,73,45,46,201,204,75,15,129,80,0};
+    uint8_t buffer[] = {5,193,1,1,0,0,8,195,32,110,255,206,19,68,210,77,194,3};
     
     BitStream s = {};
     s.buffer = &(buffer[0]);
@@ -17,7 +17,7 @@ int main(){
     for (int i = 0; i < sizeof(buffer); i++){
         uint8_t x = buffer[i];
         for (int i = 0; i < 8; i++){
-            printf("%d", (x>>(7-i)) & 1);
+            printf("%d", (x>>i) & 1);
         }
         printf(" ");
     }
