@@ -10,25 +10,37 @@ TODO:
     Parse prefix code lengths and generate CPrefixCodeTable in dynamic mode
 */
 
+/*
+Note: bits are ordered |MSB 7 6 5 4 3 2 1 LSB| within the byte
+values are in machine (MSB) order.
+see rfc 1950 for details
+*/
 ZlibBlock parseBlockHeader(uint8_t *buffer,uint64_t *ptr){
-
-
-
-
+    ZlibBlock block = {};
+    block.compressionMethod = getBitsMSB(buffer,*ptr+4,4);
+    block.compressionInfo = getBitsMSB(buffer,*ptr,4);
+    block.hasDictionary = getBit(buffer,*ptr + 15);
+    block.compressionLevel = getBitsMSB(buffer,*ptr+8,2);
+    block.isValid = ((uint16_t)getBitsMSB(buffer,*ptr,16)) % 31 == 0;
+    *ptr = *ptr + 16;
+    return block;
 }
 
 int inflate(uint8_t *buffer,size_t size,uint8_t **output){
 
     uint64_t ptr = 0;
 
-    //read header
-    uint8_t isLast = getBit(buffer,ptr++);
-    //read block type
-    uint8_t blockType = (uint8_t) getBitsLSB(buffer,ptr,2);
-    ptr+=2;
-    printf("isLast: %d blockType: %d\n",isLast,blockType);
+    ZlibBlock block = parseBlockHeader(buffer,&ptr);
 
-    switch (blockType){
+    printf("CM: %d CINFO: %d FDICT %d FLEVEL %d VALID %d\n",
+        block.compressionMethod,
+        block.compressionInfo,
+        block.hasDictionary,
+        block.compressionLevel,
+        block.isValid);
+    printf("isLast: %d blockType: %d\n",block.isLastBlock,block.blockType);
+
+    switch (block.blockType){
         case 0: //uncompressed block (store)
             ptr = ((ptr/8) + 1)*8; //flush to byte
             uint16_t length = getBitsLSB(buffer,ptr,16);
