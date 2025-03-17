@@ -93,6 +93,10 @@ void f_b(uint64_t value,const uint8_t numBits){
     }
 }
 
+size_t ringBufferIndex(size_t current,long offset,size_t size){
+    return (current + offset) % size;
+}
+
 struct prefixAlphabet fixedLiteralLength;
 struct prefixAlphabet fixedDistance;
 
@@ -202,19 +206,22 @@ void appendToBuffer(uint8_t value, uint8_t **buffer, size_t *allocatedSize, size
 
 int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
     uint64_t ptr = 0;
+    //this is separate from *outputLength because 
+    //memory is re-allocated in blocks of 8129 as needed
+    size_t allocatedOutput = *outputLength;
+    uint8_t *slidingWindow = NULL;
+    size_t slidingWindowWrite = 0;
+    size_t slidingWindowSize = 0;
 
-    f_b(getBitsLSB(src,ptr,8),8);
-    printf("\n");
-    f_b(getBitsLSB(src,ptr,4),4);
-    printf("\n");
-    f_b(getBitsLSB(src,ptr+4,4),4);
-    printf("\n");
     uint8_t compressionMethod = getBitsLSB(src,ptr,4);
     uint8_t compressionInfo = getBitsLSB(src,ptr+4,4);
     uint8_t hasDict = getBitsLSB(src,ptr+13,1);
     uint8_t compressionLevel = getBitsLSB(src,ptr+14,2);
     uint16_t isValid = (((src[0] << 8) | src[1]) % 31) == 0;
     ptr+=16;
+
+    slidingWindowSize = 1 << (compressionInfo+7);
+    slidingWindow = malloc( slidingWindowSize );
 
     printf("Compression Method: %d\n",compressionMethod);
     printf("Compression Info: %d\n",compressionInfo);
@@ -230,8 +237,6 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
         return -3; //fixed code generation failed
     }
 
-    size_t allocatedOutput = *outputLength;
-
     uint8_t isLast = getBitsLSB(src,ptr,1);
     uint8_t blockType = getBitsLSB(src,ptr+1,2);
     ptr += 3;
@@ -243,8 +248,8 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
         return -3;//invalid blocktype
     }
     if (blockType != 0){
-        struct prefixAlphabet literalLength = {};
-        struct prefixAlphabet distance = {};
+        struct prefixAlphabet *literalLength = NULL;
+        struct prefixAlphabet *distance = NULL;
         if (blockType == 2){
             
         } else {
@@ -267,9 +272,19 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                     uint8_t distance = 
                         getBitsMSB(src,ptr,extraBitsDistance) + EXTRA_BITS_DISTANCE_OFFSET[distanceCode];
                     ptr += extraBitsDistance;
-                    printf("Length %d Distance %d\n",length,distance);
+                    //LZSS  backreferencing
+                    size_t begin = ringBufferIndex(slidingWindowWrite,-distance,slidingWindowSize);
+                    for (int i = 0; i < length;i++){
+                        //repeat literal
+                        uint8_t repeat = slidingWindow[ringBufferIndex(begin,i,slidingWindowSize)];
+                        slidingWindow[slidingWindowWrite] = repeat;
+                        slidingWindowWrite = ringBufferIndex(slidingWindowWrite,1,slidingWindowSize);
+                        appendToBuffer(repeat,out,&allocatedOutput,outputLength);
+                    }
                 } else {
                     //literal
+                    slidingWindow[slidingWindowWrite] = code;
+                    slidingWindowWrite = ringBufferIndex(slidingWindowWrite,1,slidingWindowSize);
                     appendToBuffer(code,out,&allocatedOutput,outputLength);
                 }
             }
@@ -280,6 +295,14 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
 
     //truncate memory garbage at the end
     *out = realloc(*out,*outputLength);
+
+    free(fixedLiteralLength.codes);
+    free(fixedLiteralLength.length);
+    free(fixedLiteralLength.literals);
+    free(fixedDistance.codes);
+    free(fixedDistance.length);
+    free(fixedDistance.literals);
+    free(slidingWindow);
 
     return 1;
 }
