@@ -25,6 +25,8 @@ static const uint16_t extraBitOffsetDistance[] = {
 };
 
 static const int MAX_CODE_LENGTH = 15;
+static const int MAX_LENGTH_LITERAL_CODES = 286;
+static const int MAX_DISTANCE_CODES = 30;
 
 typedef struct CPrefixCode{
     //the length is no larger than 7 in practice

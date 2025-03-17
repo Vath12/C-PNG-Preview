@@ -82,9 +82,35 @@ int parseDynamicCodeTable(
     if (!result){
         return result; //code length code generation failed
     }
-    //header->numLengthLiteralCodes
-    for (int i = 0; i < 2;i++){
-        printf("%d\n",nextCode(buffer,ptr,&codeLengthCode));
+
+    for (int i = 0; i < (header->numLengthLiteralCodes+header->numDistanceCodes);i++){
+        /*
+        read and decode the compressed LL and distance codes using the code length code
+        */
+        uint8_t code = nextCode(buffer,ptr,&codeLengthCode);
+        uint8_t extraBits = 0;
+        uint8_t runLength = 0;
+        switch (code){
+            case 16:
+                extraBits = 2;
+                break;
+            case 17:
+                runLength = 3;
+                extraBits = 3;
+                break;
+            case 18:
+                runLength = 11;
+                extraBits = 7;
+                break;
+            default:
+                break;
+        }
+        runLength += getBitsLSB_r(buffer,*ptr,extraBits);
+        printf("%d ",code);
+        if (extraBits != 0){
+            printf("(%d) ",runLength);
+        }
+        *ptr = *ptr + extraBits;
     }
     return 1;
 }
