@@ -87,7 +87,6 @@ int parseDynamicCodeTable(
     if (!result){
         return result; //code length code generation failed
     }
-
     //the code lengths that we want output
     uint8_t llCodeLengths[MAX_LENGTH_LITERAL_CODES] = {0};
     uint8_t dCodeLengths[MAX_DISTANCE_CODES] = {0};
@@ -169,14 +168,39 @@ int parseDynamicCodeTable(
     return llResult ? dResult : llResult;
 }
 
+//see rfc section 3.2.5 (page 11) for all the length/distance details
+uint8_t getExtraLengthBits(uint16_t length){
+    if (length <= 256){
+        return 0;
+    }
+    return EXTRA_BITS_LENGTH[length-257];
+}
+uint32_t getLengthOffset(uint16_t length,uint16_t extraBits){
+    return EXTRA_BITS_LENGTH[length-257] + EXTRA_BITS_LENGTH_OFFSET[length-257];
+}
+uint8_t getExtraDistanceBits(uint8_t distance){
+    return EXTRA_BITS_DISTANCE[distance];
+}
+uint32_t getDistanceOffset(uint8_t distance,uint16_t extraBits){
+    return EXTRA_BITS_DISTANCE[distance] + EXTRA_BITS_DISTANCE_OFFSET[distance];
+}
+
 int inflateBlock(
-    CPrefixCodeTable *LengthLiteralCodes,
-    CPrefixCodeTable *DistanceCodes,
+    zlibAlphabets *literalLengthDistanceAlphabets,
     uint8_t *slidingWindowRingBuffer,
     uint16_t slidingWindowSize,
     uint8_t *data,
+    uint64_t *ptr,
     uint8_t **output
 ){
+    while (1){
+        uint16_t llCode = nextCode(data,ptr,&literalLengthDistanceAlphabets->lengthLiteral);
+        printf("%d \n",llCode);
+        if (llCode > 255){
+            break;
+        }
+    }
+
     return 1;
 }
 
@@ -196,6 +220,14 @@ int inflate(uint8_t *buffer,size_t size,uint8_t **output){
         );
 
     printf("isLast: %d blockType: %d\n",block.isLastBlock,block.blockType);
+    
+    uint8_t* uncompressed = malloc(size);
+
+    uint32_t slidingWindowSize = 1 << (7+head.compressionInfo);
+    uint8_t *slidingWindow = calloc(slidingWindowSize,1);
+    if (slidingWindow == NULL){
+        return -2; //out of memory;
+    }
 
     switch (block.blockType){
         case 0: //uncompressed block (store)
@@ -225,6 +257,13 @@ int inflate(uint8_t *buffer,size_t size,uint8_t **output){
                 );
                 zlibAlphabets alphabets = {};
                 parseDynamicCodeTable(buffer,&ptr,&alphabets,&blockHead);
+                inflateBlock(
+                    &alphabets,
+                    slidingWindow,
+                    slidingWindowSize,
+                    buffer,
+                    &ptr,
+                    &uncompressed);
             }
             break; 
         case 3:

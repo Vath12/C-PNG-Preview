@@ -172,23 +172,6 @@ int generateCodes(CPrefixCodeTable* table){
     return 1;
 }
 
-//see rfc section 3.2.5 (page 11) for all the length/distance details
-uint8_t getExtraLengthBits(uint16_t length){
-    if (length <= 256){
-        return 0;
-    }
-    return extraBitsLength[length-257];
-}
-uint32_t getLengthOffset(uint16_t length,uint16_t extraBits){
-    return extraBitsLength[length-257] + extraBitOffsetLength[length-257];
-}
-uint8_t getExtraDistanceBits(uint8_t distance){
-    return extraBitsDistance[distance];
-}
-uint32_t getDistanceOffset(uint8_t distance,uint16_t extraBits){
-    return extraBitsDistance[distance] + extraBitOffsetLength[distance];
-}
-
 //assumes that table's codes are sorted by their length in ascending order
 uint16_t nextCode(uint8_t* buffer,uint64_t *ptr,CPrefixCodeTable* table){
     uint8_t maxLength = table->codes[table->size - 1].length;
