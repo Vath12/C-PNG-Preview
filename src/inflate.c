@@ -115,6 +115,17 @@ int parseDynamicCodeTable(
     return 1;
 }
 
+int inflateBlock(
+    CPrefixCodeTable *LengthLiteralCodes,
+    CPrefixCodeTable *DistanceCodes,
+    uint8_t *slidingWindowRingBuffer,
+    uint16_t slidingWindowSize,
+    uint8_t *data,
+    uint8_t **output
+){
+    return 1;
+}
+
 int inflate(uint8_t *buffer,size_t size,uint8_t **output){
 
     uint64_t ptr = 0;
