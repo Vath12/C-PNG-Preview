@@ -15,6 +15,11 @@ int main(){
     size_t outputSize = 0;
     deflate(&uncompressed,&outputSize,fileData,size);
 
+    for (int i = 0; i < outputSize;i++){
+        printf("%c",uncompressed[i]);
+    }
+    printf("\n");
+
     free(uncompressed);
     free(fileData);
     

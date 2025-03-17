@@ -230,12 +230,6 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
         return -3; //fixed code generation failed
     }
 
-    for (int i = 0; i < 286; i++){
-        printf("%d ",fixedLiteralLength.literals[i]);
-        f_b(fixedLiteralLength.codes[i],fixedLiteralLength.length[i]);
-        printf("\n");
-    }
-
     size_t allocatedOutput = *outputLength;
 
     uint8_t isLast = getBitsLSB(src,ptr,1);
