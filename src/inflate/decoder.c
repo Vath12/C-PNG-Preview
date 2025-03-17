@@ -28,6 +28,42 @@ const uint16_t EXTRA_BITS_DISTANCE_OFFSET[] = {
     1025,1537,2049,3073,4097,6145,8193,12289,16385,24557
 };
 
+/*This lil fella's existence is brought to you by rfc 1951 pg 13
+In block type 2 we've got the cl (code length) code 
+encoding the code lengths of the prefix codes.
+The cl code itself is a canonical prefix code encoding the symbols 0-19
+
+Symbols 0-15 are literal values corresponding to code lengths that we pass
+to the prefix code generator. 
+
+Symbols 16-19 are for run length encoding.
+
+Symbol 16: copy the previous code 3 + (value of next 3 bits) times
+
+Symbol 17: write 0s 3 + (value of next 3 bits) times
+
+Symbol 18: Write 0s 11 + (value of next 11 bits) times
+
+What I still don't understand is why the specification has index 19 and 0
+for a table with 18 symbols defined. I thought indexing might start at 1
+for some reason (they had lua back then didn't they?) but 0 is also present.
+
+Oh and if that couldn't get more confusing the assignment order is non-linear
+and happens in an arbitrary order (defined by clCodeAssignmentOrder)
+
+My best guess as to why that is is that it allows for the encoder to truncate
+more of the cl code because codes with a length likely to be 0 are 
+encoded at the end of the sequence. 
+
+How they determined which codes are likeliest to be 0 is beyond me but here we are.
+*/
+static const uint8_t clCodeAssignmentOrder[] = {
+    16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15
+};
+static const uint16_t clCodeLiteral[] = {
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
+};
+
 struct prefixAlphabet{
     uint16_t *literals;
     uint8_t *length;
@@ -248,13 +284,13 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
         return -3;//invalid blocktype
     }
     if (blockType != 0){
-        struct prefixAlphabet *literalLength = NULL;
-        struct prefixAlphabet *distance = NULL;
+        struct prefixAlphabet *literalLengthAlphabet = &fixedLiteralLength;
+        struct prefixAlphabet *distanceAlphabet = &fixedDistance;
         if (blockType == 2){
             
         } else {
             while (1){
-                uint16_t code = nextCode(src,&ptr,&fixedLiteralLength,286);
+                uint16_t code = nextCode(src,&ptr,literalLengthAlphabet,286);
                 if (code == END_OF_BLOCK){
                     //EOB
                     break;
@@ -266,7 +302,7 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                         getBitsMSB(src,ptr,extraBitsLength) + EXTRA_BITS_LENGTH_OFFSET[code-257]; 
                     ptr += extraBitsLength;
                     //get distance code
-                    uint16_t distanceCode = nextCode(src,&ptr,&fixedDistance,30);
+                    uint16_t distanceCode = nextCode(src,&ptr,distanceAlphabet,30);
                     //extra bits for distance code
                     uint8_t extraBitsDistance = EXTRA_BITS_DISTANCE[distanceCode];
                     uint8_t distance = 
@@ -289,6 +325,13 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                 }
             }
         }
+
+        if (blockType == 2){
+            //free dynamic prefix code tables
+            free(literalLengthAlphabet);
+            free(distanceAlphabet);
+        }
+
     } else {
         
     }
