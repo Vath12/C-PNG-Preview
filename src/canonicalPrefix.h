@@ -36,6 +36,8 @@ typedef struct CPrefixCodeTable{
     CPrefixCode *codes;
 } CPrefixCodeTable;
 
+
+
 void deallocateCPrefixCodeTable(CPrefixCodeTable* table);
 int allocateCPrefixCodeTable(CPrefixCodeTable* table,uint16_t size);
 //see rfc 1951 section 3.2.6.
@@ -49,3 +51,5 @@ uint32_t getLengthOffset(uint16_t length,uint16_t extraBits);
 
 uint8_t getExtraDistanceBits(uint8_t distance);
 uint32_t getDistanceOffset(uint8_t distance,uint16_t extraBits);
+
+uint16_t nextCode(uint8_t* buffer,CPrefixCodeTable* table);

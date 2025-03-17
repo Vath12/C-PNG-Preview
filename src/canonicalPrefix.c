@@ -1,4 +1,5 @@
 #include "canonicalPrefix.h"
+#include "bitUtil.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -134,6 +135,7 @@ int generateCodes(CPrefixCodeTable* table){
 
     return 1;
 }
+
 //see rfc section 3.2.5 (page 11) for all the length/distance details
 uint8_t getExtraLengthBits(uint16_t length){
     if (length <= 256){
@@ -149,5 +151,16 @@ uint8_t getExtraDistanceBits(uint8_t distance){
 }
 uint32_t getDistanceOffset(uint8_t distance,uint16_t extraBits){
     return extraBitsDistance[distance] + extraBitOffsetLength[distance];
+}
+
+uint16_t nextCode(uint8_t* buffer,CPrefixCodeTable* table){
+    uint8_t nextBit = 0;
+
+    while(1){
+
+        nextBit++;
+    }
+
+    return 0;
 }
 
