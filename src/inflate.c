@@ -52,6 +52,11 @@ static const uint16_t clCodeLiteral[] = {
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
 };
 
+static void addCodeLength(uint8_t *codeLengths,uint8_t codeLength,uint16_t *assignedCodeLengths){
+    codeLengths[*assignedCodeLengths+1] = codeLength;
+    *assignedCodeLengths = *assignedCodeLengths+1;
+}
+
 //assumes that output's code tables are uninitialized and do not need to be freed
 int parseDynamicCodeTable(
     uint8_t *buffer, 
@@ -83,35 +88,86 @@ int parseDynamicCodeTable(
         return result; //code length code generation failed
     }
 
-    for (int i = 0; i < (header->numLengthLiteralCodes+header->numDistanceCodes);i++){
+    //the code lengths that we want output
+    uint8_t llCodeLengths[MAX_LENGTH_LITERAL_CODES] = {0};
+    uint8_t dCodeLengths[MAX_DISTANCE_CODES] = {0};
+    uint16_t assignedLLCodeLengths = 0;
+    uint16_t assignedDCodeLengths = 0;
+    //run length encoding parameters
+    uint32_t rleDecodePtr = 0;
+    uint32_t numCodes = 0;
+    uint8_t lastRunLength = 0;
+    uint8_t lastRunSymbol = 0;
+
+    int i = 0;
+    while (numCodes < header->numLengthLiteralCodes+header->numDistanceCodes){
         /*
         read and decode the compressed LL and distance codes using the code length code
         */
         uint8_t code = nextCode(buffer,ptr,&codeLengthCode);
         uint8_t extraBits = 0;
-        uint8_t runLength = 0;
+        uint8_t runLength = 1;
         switch (code){
             case 16:
+                runLength += 2;
                 extraBits = 2;
                 break;
             case 17:
-                runLength = 3;
+                code = 0;
+                runLength += 2;
                 extraBits = 3;
                 break;
             case 18:
-                runLength = 11;
+                code = 0;
+                runLength += 10;
                 extraBits = 7;
                 break;
             default:
                 break;
         }
         runLength += getBitsLSB_r(buffer,*ptr,extraBits);
-        printf("%d ",code);
-        if (extraBits != 0){
-            printf("(%d) ",runLength);
+        
+        int actualRun = runLength;
+        uint8_t actualCode = code;
+        if (code == 16){
+            actualRun *= lastRunLength;
+            actualCode = lastRunSymbol;
+        } 
+        for (int i = 0; i < actualRun;i++){
+            if (numCodes < header->numLengthLiteralCodes){
+                addCodeLength(&llCodeLengths[0],actualCode,&assignedLLCodeLengths);
+            } else {
+                addCodeLength(&dCodeLengths[0],actualCode,&assignedDCodeLengths);
+            }
+            numCodes++;
         }
+        lastRunSymbol = code;
+        lastRunLength = runLength;
         *ptr = *ptr + extraBits;
+        i++;
     }
+    CPrefixCodeTable lengthLiteralCodes;
+    CPrefixCodeTable distanceCodes;
+
+    for (int i = 0; i < MAX_LENGTH_LITERAL_CODES;i++){
+        printf("%d,",llCodeLengths[i]);
+    }
+    printf("\n");
+    for (int i = 0; i < MAX_DISTANCE_CODES;i++){
+        printf("%d,",dCodeLengths[i]);
+    }
+    printf("\n");
+    
+    int llResult = generateCodesFromLength(
+        llCodeLengths,
+        MAX_LENGTH_LITERAL_CODES,
+        &lengthLiteralCodes);
+    printf("\nDistance\n");
+    int dResult = generateCodesFromLength(
+        dCodeLengths,
+        MAX_DISTANCE_CODES,
+        &distanceCodes);
+    printf("\nresult: %d %d\n",llResult,dResult);
     return 1;
 }
 

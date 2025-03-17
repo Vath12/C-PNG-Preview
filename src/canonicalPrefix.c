@@ -81,18 +81,6 @@ int generateFixedLengthLiteralCodes(CPrefixCodeTable* output){
     if (!generateCodes(output)){
         return -2; //code generation failed
     }
-    /*
-    //Print LL Code 
-    for (int i = 0; i < output->size;i++){
-        printf("%4d %4d ",
-            output->codes[i].length,
-            output->codes[i].value);
-        for (int k = output->codes[i].length - 1; k >= 0;k--){
-            printf("%d",(output->codes[i].code >> k) & 0b1);
-        }
-        printf("\n");
-    }
-    */
     return 1;
 }
 
@@ -113,15 +101,36 @@ int generateCodesFromLengthLiteral(
     if (!generateCodes(output)){
         return -2; //code generation failed
     }
+    return 1;
+}
+
+int generateCodesFromLength(
+    uint8_t *length,
+    uint16_t num,
+    CPrefixCodeTable* output
+){
+    if (!allocateCPrefixCodeTable(output,num)){
+        return -1; //out of memory
+    }
+
+    for (uint16_t i = 0; i < num;i++){
+        output->codes[i].length = length[i];
+        output->codes[i].value = i;
+    }
+    if (!generateCodes(output)){
+        return -2; //code generation failed
+    }
     
     for (int i = 0; i < output->size;i++){
-        printf("%4d %4d ",
-            output->codes[i].length,
-            output->codes[i].value);
-        for (int k = output->codes[i].length - 1; k >= 0;k--){
-            printf("%d",(output->codes[i].code >> k) & 0b1);
+        if (output->codes[i].length != 0){
+            printf("%4d %4d ",
+                output->codes[i].length,
+                output->codes[i].value);
+            for (int k = output->codes[i].length - 1; k >= 0;k--){
+                printf("%d",(output->codes[i].code >> k) & 0b1);
+            }
+            printf(" %d \n",output->codes[i].code);
         }
-        printf(" %d \n",output->codes[i].code);
     }
     
     return 1;

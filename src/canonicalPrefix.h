@@ -48,6 +48,11 @@ int allocateCPrefixCodeTable(CPrefixCodeTable* table,uint16_t size);
 int generateFixedLengthDistanceCodes(CPrefixCodeTable* output);
 //see rfc 1951 section 3.2.6.
 int generateFixedLengthLiteralCodes(CPrefixCodeTable* output);
+int generateCodesFromLength(
+    uint8_t *length,
+    uint16_t num,
+    CPrefixCodeTable* output
+);
 int generateCodesFromLengthLiteral(
     uint8_t *length,
     uint16_t *literal,
