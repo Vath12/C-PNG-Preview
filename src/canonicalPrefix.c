@@ -6,6 +6,11 @@ int max(a,b){
     return a>b ? a:b;
 }
 
+int compareCode(const void *A, const void *B)
+{
+    return (*((CPrefixCode*)A)).code - (*((CPrefixCode*)B)).code;
+}
+
 int compareValue(const void *A, const void *B)
 {
     return (*((CPrefixCode*)A)).value - (*((CPrefixCode*)B)).value;
@@ -121,8 +126,8 @@ int generateCodes(CPrefixCodeTable* table){
             table->codes[i].code = next_code[table->codes[i].length]++;
         }
     }
-    //sort by value for better lookup
-    qsort(&(table->codes[0]),table->size,sizeof(CPrefixCode),compareValue);
+    //sort by code for better search
+    qsort(&(table->codes[0]),table->size,sizeof(CPrefixCode),compareCode);
 
     free(next_code);
     free(lengths);
