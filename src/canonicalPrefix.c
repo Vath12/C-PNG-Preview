@@ -81,6 +81,8 @@ int generateFixedLengthLiteralCodes(CPrefixCodeTable* output){
     if (!generateCodes(output)){
         return -2; //code generation failed
     }
+    /*
+    //Print LL Code 
     for (int i = 0; i < output->size;i++){
         printf("%4d %4d ",
             output->codes[i].length,
@@ -90,7 +92,7 @@ int generateFixedLengthLiteralCodes(CPrefixCodeTable* output){
         }
         printf("\n");
     }
-    
+    */
     return 1;
 }
 
@@ -111,6 +113,7 @@ int generateCodesFromLengthLiteral(
     if (!generateCodes(output)){
         return -2; //code generation failed
     }
+    
     for (int i = 0; i < output->size;i++){
         printf("%4d %4d ",
             output->codes[i].length,
@@ -153,7 +156,7 @@ int generateCodes(CPrefixCodeTable* table){
         //only assign codes with nonzero length
         uint16_t length = table->codes[i].length;
         if (length != 0){
-            table->codes[i].code = next_code[length];
+            table->codes[i].code = next_code[length] & (((uint16_t) -1) >> (16-length));
             next_code[length] += 1;
         }
     }
@@ -182,18 +185,19 @@ uint16_t nextCode(uint8_t* buffer,uint64_t *ptr,CPrefixCodeTable* table){
     uint8_t maxLength = table->codes[table->size - 1].length;
     uint8_t length = 0;
     uint16_t code = 0;
+    int nextSearch = 0;
     while(length <= maxLength){
-        //code <<= 1;
-        //code |= getBit_r(buffer,*ptr);
-        code |= getBit_r(buffer,*ptr) << length;
+        code <<= 1;
+        code |= getBit_r(buffer,*ptr);
         length++;
         *ptr = *ptr + 1;
         //search for matching prefix codes
-        for (int i = 0;i < table->size;i++){
+        for (int i = nextSearch;i < table->size;i++){
             if (table->codes[i].length > length){
                 break;
             }
             if (table->codes[i].length == length){
+                nextSearch = i;
                 if (table->codes[i].code == code){
                     return table->codes[i].value;
                 }
