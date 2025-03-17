@@ -94,6 +94,36 @@ int generateFixedLengthLiteralCodes(CPrefixCodeTable* output){
     return 1;
 }
 
+int generateCodesFromLengthLiteral(
+    uint8_t *length,
+    uint16_t *literal,
+    uint16_t num,
+    CPrefixCodeTable* output
+){
+    if (!allocateCPrefixCodeTable(output,num)){
+        return -1; //out of memory
+    }
+
+    for (uint16_t i = 0; i < num;i++){
+        output->codes[i].length = length[i];
+        output->codes[i].value = literal[i];
+    }
+    if (!generateCodes(output)){
+        return -2; //code generation failed
+    }
+    for (int i = 0; i < output->size;i++){
+        printf("%4d %4d ",
+            output->codes[i].length,
+            output->codes[i].value);
+        for (int k = output->codes[i].length - 1; k >= 0;k--){
+            printf("%d",(output->codes[i].code >> k) & 0b1);
+        }
+        printf("\n");
+    }
+    
+    return 1;
+}
+
 //see rfc 1951 pg 7
 int generateCodes(CPrefixCodeTable* table){
     //sort by length and value
