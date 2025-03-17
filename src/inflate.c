@@ -28,8 +28,8 @@ ZlibHeader parseZlibHeader(uint8_t *buffer,uint64_t *ptr){
 
 ZlibBlock parseZlibBlockHeader(uint8_t *buffer,uint64_t *ptr){
     ZlibBlock block = {};
-    block.isLastBlock = getBit(buffer, *ptr);
-    block.isLastBlock = getBitsMSB(buffer,*ptr + 1,2);
+    block.isLastBlock = getBit_r(buffer, *ptr);
+    block.blockType = getBitsLSB_r(buffer,*ptr + 1,2);
     *ptr = *ptr + 3;
     return block;
 }
