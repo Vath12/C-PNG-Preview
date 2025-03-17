@@ -13,7 +13,7 @@ int main(){
     readFile("../resources/testFile",&fileData,&size);
     uint8_t *uncompressed = NULL;
     size_t outputSize = 0;
-    deflate(&uncompressed,&outputSize,fileData,size);
+    printf("deflate exited with code %d\n",deflate(&uncompressed,&outputSize,fileData,size));
 
     for (int i = 0; i < outputSize;i++){
         printf("%c",uncompressed[i]);
