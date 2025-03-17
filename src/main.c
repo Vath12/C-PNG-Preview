@@ -8,12 +8,16 @@
 
 int main(){
     
-    uint8_t *fileData;
-    size_t size;
-    readFile("../resources/zeros.raw",&fileData,&size);
-    uint8_t *uncompressed;
-    size_t outputSize;
+    uint8_t *fileData = NULL;
+    size_t size = 0;
+    readFile("../resources/testFile",&fileData,&size);
+    uint8_t *uncompressed = NULL;
+    size_t outputSize = 0;
     deflate(&uncompressed,&outputSize,fileData,size);
+
+    free(uncompressed);
+    free(fileData);
+    
     //printf("readPNG exited with code: %d\n",readPNG("../resources/image.png"));
     /*
     uint8_t buffer[] = {5,193,1,1,0,0,8,195,32,110,255,206,19,68,210,77,194,3};
