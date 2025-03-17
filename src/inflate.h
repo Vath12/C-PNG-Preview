@@ -30,18 +30,22 @@ There are 29 codes
 
 static const uint16_t END_OF_BLOCK = 256;
 
-typedef struct ZlibBlock{
-    uint8_t *bitstream;
+typedef struct ZlibHeader{
     uint8_t compressionMethod;
     uint8_t compressionInfo;
     uint8_t hasDictionary;
     uint8_t compressionLevel;
     uint8_t isValid;
+    uint8_t length;
+} ZlibHeader;
+
+typedef struct ZlibBlock{
+    uint8_t *bitstream;
     uint8_t isLastBlock;
     uint8_t blockType;
-    uint8_t length;
 } ZlibBlock;
 
-ZlibBlock parseBlockHeader(uint8_t *buffer,uint64_t *ptr);
+ZlibHeader parseZlibHeader(uint8_t *buffer,uint64_t *ptr);
+ZlibBlock parseZlibBlockHeader(uint8_t *buffer,uint64_t *ptr);
 
 int inflate(uint8_t *buffer,size_t size,uint8_t **output);
