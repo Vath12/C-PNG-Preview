@@ -127,8 +127,8 @@ int generateCodes(CPrefixCodeTable* table){
             table->codes[i].code = next_code[table->codes[i].length]++;
         }
     }
-    //sort by code for better search
-    qsort(&(table->codes[0]),table->size,sizeof(CPrefixCode),compareCode);
+
+    //qsort(&(table->codes[0]),table->size,sizeof(CPrefixCode),compareLength);
 
     free(next_code);
     free(lengths);
@@ -153,14 +153,28 @@ uint32_t getDistanceOffset(uint8_t distance,uint16_t extraBits){
     return extraBitsDistance[distance] + extraBitOffsetLength[distance];
 }
 
-uint16_t nextCode(uint8_t* buffer,CPrefixCodeTable* table){
-    uint8_t nextBit = 0;
-
-    while(1){
-
-        nextBit++;
+//assumes that table's codes are sorted by their length in ascending order
+uint16_t nextCode(uint8_t* buffer,uint64_t *ptr,CPrefixCodeTable* table){
+    uint8_t maxLength = table->codes[table->size - 1].length;
+    uint8_t length = 0;
+    uint16_t code = 0;
+    while(length <= maxLength){
+        code <<= 1;
+        code |= getBit(buffer,*ptr);
+        length++;
+        *ptr = *ptr + 1;
+        //search for matching prefix codes
+        for (int i = 0;i < table->size;i++){
+            if (table->codes[i].length > length){
+                break;
+            }
+            if (table->codes[i].length == length){
+                if (table->codes[i].code == code){
+                    return table->codes[i].value;
+                }
+            }
+        }
     }
-
-    return 0;
+    return -1; //no matching codes found
 }
 

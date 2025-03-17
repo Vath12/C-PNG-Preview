@@ -27,13 +27,25 @@ int main(){
     free(output);
     */
     
-    CPrefixCodeTable x = {};
-    CPrefixCodeTable y = {};
-    generateFixedLengthLiteralCodes(&x);
-    generateFixedLengthDistanceCodes(&y);
+    CPrefixCodeTable LL = {};
+    CPrefixCodeTable distance = {};
+    generateFixedLengthLiteralCodes(&LL);
+    generateFixedLengthDistanceCodes(&distance);
 
-    deallocateCPrefixCodeTable(&x);
-    deallocateCPrefixCodeTable(&y);
+    uint8_t buffer[] = {0b00110000,0b00110001};
+    uint64_t ptr = 0;
+
+    while (ptr < 16){
+        uint16_t code = nextCode(&(buffer[0]),&ptr,&LL);
+        if (code == ((uint16_t) -1)){
+            printf("malformed prefix code \n");
+        } else {
+            printf("%d ",code);
+        }
+    }
+
+    deallocateCPrefixCodeTable(&LL);
+    deallocateCPrefixCodeTable(&distance);
 
     return 0;
 
