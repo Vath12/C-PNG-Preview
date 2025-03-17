@@ -146,8 +146,6 @@ int parseDynamicCodeTable(
         *ptr = *ptr + extraBits;
         i++;
     }
-    CPrefixCodeTable lengthLiteralCodes;
-    CPrefixCodeTable distanceCodes;
 
     for (int i = 0; i < MAX_LENGTH_LITERAL_CODES;i++){
         printf("%d,",llCodeLengths[i]);
@@ -161,14 +159,14 @@ int parseDynamicCodeTable(
     int llResult = generateCodesFromLength(
         llCodeLengths,
         MAX_LENGTH_LITERAL_CODES,
-        &lengthLiteralCodes);
+        &output->lengthLiteral);
     printf("\nDistance\n");
     int dResult = generateCodesFromLength(
         dCodeLengths,
         MAX_DISTANCE_CODES,
-        &distanceCodes);
-    printf("\nresult: %d %d\n",llResult,dResult);
-    return 1;
+        &output->distance);
+
+    return llResult ? dResult : llResult;
 }
 
 int inflateBlock(

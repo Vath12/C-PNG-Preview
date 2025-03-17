@@ -53,8 +53,8 @@ typedef struct ZlibDynamicHeader{
 } ZlibDynamicHeader;
 
 typedef struct zlibAlphabets{
-    CPrefixCodeTable *LengthLiteral;
-    CPrefixCodeTable *Distance;
+    CPrefixCodeTable *lengthLiteral;
+    CPrefixCodeTable *distance;
 } zlibAlphabets;
 
 ZlibHeader parseZlibHeader(uint8_t *buffer,uint64_t *ptr);
