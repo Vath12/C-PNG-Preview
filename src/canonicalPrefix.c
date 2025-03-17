@@ -178,3 +178,5 @@ uint16_t nextCode(uint8_t* buffer,uint64_t *ptr,CPrefixCodeTable* table){
     return -1; //no matching codes found
 }
 
+
+

@@ -13,12 +13,7 @@ TODO:
 int inflate(uint8_t *buffer,size_t size,uint8_t **output){
 
     uint64_t ptr = 0;
-
-    uint8_t testBuffer[] = {0b01100000,0b10000000};
-    printf("testbuffer: %x \n",getBit(&testBuffer[0],0));
-    printf("testbuffer: %x \n",getBitsLSB(&testBuffer[0],0,3));
-    printf("testbuffer: %x \n",getBitsMSB(&testBuffer[0],0,3));
-
+    
     //read header
     uint8_t isLast = getBit(buffer,ptr++);
     //read block type
