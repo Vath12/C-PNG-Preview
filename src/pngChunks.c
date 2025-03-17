@@ -52,14 +52,15 @@ int parseIDAT(ChunkData* c, IDAT *output){
         return -1;
     }
     memcpy(resizedBuffer,output->buffer,output->size);
-    revmemcpy(resizedBuffer+output->size,c->chunkData,c->length);
+    memcpy(resizedBuffer+output->size,c->chunkData,c->length);
+
     free(output->buffer);
     output->size = output->size+c->length;
     output->buffer = resizedBuffer;
     return 1;
 }
 int parsePLTE(ChunkData* c, PLTE *output){
-    revmemcpy(&output,c->chunkData,c->length);
+    memcpy(&output,c->chunkData,c->length);
     return 1;
 }
 
