@@ -39,8 +39,8 @@ int readPNG(char path[]){
     PLTE pallate = {};
     while (ptr < size){
         ChunkData c = readChunk(rawData,ptr);
-        printf("Chunk Code: %s",c.code);
-        printf(" span %u at %u\n",c.length,ptr);
+        //printf("Chunk Code: %s",c.code);
+        //printf(" span %u at %u\n",c.length,ptr);
         ptr += c.length + 12;
 
         if (strcmp(c.code,CHUNK_CODE_IDAT) == 0){
@@ -49,14 +49,14 @@ int readPNG(char path[]){
            }
         } else if (strcmp(c.code,CHUNK_CODE_IHDR) == 0){
             parseIHDR(&c,&header);
-            printf("W:%d H:%d BitDepth:%d ColorType:%d compressionMethod:%d\n",
+            printf("PNG Data: W:%d H:%d BitDepth:%d ColorType:%d compressionMethod:%d\n",
             header.width,header.height,header.bitDepth,header.colorType,header.compressionMethod);
         }  else if (strcmp(c.code,CHUNK_CODE_PLTE) == 0){
             parsePLTE(&c,&pallate);
         }
         
     }
-    printf("IDAT size: %dkb\n",data.size/1000);
+    printf("Compressed image data size: %dkb\n",data.size/1000);
     uint8_t* uncompressed = malloc(0);
     inflate(data.buffer,data.size,&uncompressed);
     free(uncompressed);
