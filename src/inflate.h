@@ -30,26 +30,25 @@ There are 29 codes
 
 static const uint16_t END_OF_BLOCK = 256;
 
-typedef struct BlockStore{
+typedef struct ZlibBlock{
     uint8_t length;
     uint8_t *bitstream;
-} BlockStore;
+} ZlibBlock;
 
-typedef struct BlockFixedHuffman{
+
+typedef struct ZlibBlockStore{
+    uint8_t length;
     uint8_t *bitstream;
-} BlockFixedHuffman;
+} ZlibBlockStore;
 
-typedef struct BlockDynamicHuffman{
+typedef struct ZlibBlockFixedHuffman{
     uint8_t *bitstream;
-} BlockDynamicHuffman;
+} ZlibBlockFixedHuffman;
 
-uint8_t getBit(uint8_t *buffer,uint64_t position);
-//used for reading deflate bit sequences
-uint32_t getBitsMSB(uint8_t *buffer,uint64_t position,uint8_t num);
-//used for reading deflate numbers
-uint32_t getBitsLSB(uint8_t *buffer,uint64_t position,uint8_t num);
+typedef struct ZlibBlockDynamicHuffman{
+    uint8_t *bitstream;
+} ZlibBlockDynamicHuffman;
 
-
-BlockStore getBlockStore(uint8_t *buffer,uint64_t position);
+ZlibBlock parseBlockHeader(uint8_t *buffer,uint64_t *ptr);
 
 int inflate(uint8_t *buffer,size_t size,uint8_t **output);

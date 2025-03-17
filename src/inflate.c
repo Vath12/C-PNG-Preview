@@ -10,10 +10,17 @@ TODO:
     Parse prefix code lengths and generate CPrefixCodeTable in dynamic mode
 */
 
+ZlibBlock parseBlockHeader(uint8_t *buffer,uint64_t *ptr){
+
+
+
+
+}
+
 int inflate(uint8_t *buffer,size_t size,uint8_t **output){
 
     uint64_t ptr = 0;
-    
+
     //read header
     uint8_t isLast = getBit(buffer,ptr++);
     //read block type
