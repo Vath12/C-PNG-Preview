@@ -35,20 +35,6 @@ typedef struct ZlibBlock{
     uint8_t *bitstream;
 } ZlibBlock;
 
-
-typedef struct ZlibBlockStore{
-    uint8_t length;
-    uint8_t *bitstream;
-} ZlibBlockStore;
-
-typedef struct ZlibBlockFixedHuffman{
-    uint8_t *bitstream;
-} ZlibBlockFixedHuffman;
-
-typedef struct ZlibBlockDynamicHuffman{
-    uint8_t *bitstream;
-} ZlibBlockDynamicHuffman;
-
 ZlibBlock parseBlockHeader(uint8_t *buffer,uint64_t *ptr);
 
 int inflate(uint8_t *buffer,size_t size,uint8_t **output);
