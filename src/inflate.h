@@ -1,5 +1,6 @@
 #pragma once
 #include <stdlib.h>
+#include "canonicalPrefix.h"
 
 /*
 Implementation assumes the zlib data format used in PNGs
@@ -44,6 +45,17 @@ typedef struct ZlibBlock{
     uint8_t isLastBlock;
     uint8_t blockType;
 } ZlibBlock;
+
+typedef struct ZlibDynamicHeader{
+    uint16_t numLengthLiteralCodes;
+    uint8_t numDistanceCodes;
+    uint8_t numCodeLengthCodes;
+} ZlibDynamicHeader;
+
+typedef struct zlibAlphabets{
+    CPrefixCodeTable *LengthLiteral;
+    CPrefixCodeTable *Distance;
+} zlibAlphabets;
 
 ZlibHeader parseZlibHeader(uint8_t *buffer,uint64_t *ptr);
 ZlibBlock parseZlibBlockHeader(uint8_t *buffer,uint64_t *ptr);

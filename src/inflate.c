@@ -1,5 +1,6 @@
 #include "inflate.h"
 #include "bitUtil.h"
+#include "canonicalPrefix.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -34,6 +35,60 @@ ZlibBlock parseZlibBlockHeader(uint8_t *buffer,uint64_t *ptr){
     return block;
 }
 
+ZlibDynamicHeader parseZlibDynamicHeader(uint8_t *buffer,uint64_t *ptr){
+    ZlibDynamicHeader head = {};
+    head.numLengthLiteralCodes = getBitsLSB_r(buffer,*ptr,5)+257;
+    head.numDistanceCodes = getBitsLSB_r(buffer,*ptr+5,5)+1;
+    head.numCodeLengthCodes = getBitsLSB_r(buffer,*ptr+10,4)+4;
+    *ptr = *ptr + 14;
+    return head;
+}
+
+//this lil fella's existence is brought to you by rfc 1951 pg 13:
+static const uint8_t clCodeAssignmentOrder[] = {
+    16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15
+};
+static const uint16_t clCodeLiteral[] = {
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
+};
+
+//assumes that output's code tables are uninitialized and do not need to be freed
+int parseDynamicCodeTable(
+    uint8_t *buffer, 
+    uint64_t *ptr, 
+    zlibAlphabets *output,
+    ZlibDynamicHeader *header
+){
+    uint8_t codeLengths[19] = {0};
+    /*
+    read the lengths for each of the codes
+    note: each code length is a 3 bit unsigned integer
+    the assignment order is non-linear, and specified by clCodeAssignmentOrder
+    */
+    for (int i = 0; i < header->numCodeLengthCodes;i++){
+        codeLengths[clCodeAssignmentOrder[i]] = getBitsLSB_r(buffer,*ptr,3);
+        *ptr = *ptr + 3;
+    }
+    /*
+    generate prefix codes from the supplied lengths and literals
+    */
+    CPrefixCodeTable codeLengthCode = {};
+    int result = generateCodesFromLengthLiteral(
+        &codeLengths[0],
+        (uint16_t*) &(clCodeLiteral[0]), //cast suppresses warning
+        19,
+        &codeLengthCode
+    );
+    if (!result){
+        return result; //code length code generation failed
+    }
+    //header->numLengthLiteralCodes
+    for (int i = 0; i < 2;i++){
+        printf("%d\n",nextCode(buffer,ptr,&codeLengthCode));
+    }
+    return 1;
+}
+
 int inflate(uint8_t *buffer,size_t size,uint8_t **output){
 
     uint64_t ptr = 0;
@@ -42,11 +97,12 @@ int inflate(uint8_t *buffer,size_t size,uint8_t **output){
     ZlibBlock block = parseZlibBlockHeader(buffer,&ptr);
 
     printf("CM: %d CINFO: %d FDICT %d FLEVEL %d VALID %d\n",
-        head.compressionMethod,
-        head.compressionInfo,
-        head.hasDictionary,
-        head.compressionLevel,
-        head.isValid);
+            head.compressionMethod,
+            head.compressionInfo,
+            head.hasDictionary,
+            head.compressionLevel,
+            head.isValid
+        );
 
     printf("isLast: %d blockType: %d\n",block.isLastBlock,block.blockType);
 
@@ -54,9 +110,9 @@ int inflate(uint8_t *buffer,size_t size,uint8_t **output){
         case 0: //uncompressed block (store)
             {
             //ptr = ((ptr/8) + 1)*8; //flush to byte
-            uint16_t length = getBitsLSB(buffer,ptr,16);
+            uint16_t length = getBitsLSB_r(buffer,ptr,16);
             ptr+=16;
-            uint16_t nlength = ~(getBitsLSB(buffer,ptr,16));
+            uint16_t nlength = ~(getBitsLSB_r(buffer,ptr,16));
             printf("%d %d\n",length,nlength);
             if (length != nlength){
                 printf("block length did not match check value\n");
@@ -66,9 +122,19 @@ int inflate(uint8_t *buffer,size_t size,uint8_t **output){
             ptr += length*8;
             break;
             }
-        case 1: //block compressed with fixed huffman codes
+        case 1: //block compressed with fixed prefix codes
             break; 
-        case 2: //block compressed with dynamic huffman codes
+        case 2: //block compressed with dynamic prefix codes
+            {
+                ZlibDynamicHeader blockHead = parseZlibDynamicHeader(buffer,&ptr);
+                printf("LL: %d D: %d CL: %d\n",
+                    blockHead.numLengthLiteralCodes,
+                    blockHead.numDistanceCodes,
+                    blockHead.numCodeLengthCodes
+                );
+                zlibAlphabets alphabets = {};
+                parseDynamicCodeTable(buffer,&ptr,&alphabets,&blockHead);
+            }
             break; 
         case 3:
             printf("invalid block type\n");

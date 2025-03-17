@@ -118,7 +118,7 @@ int generateCodesFromLengthLiteral(
         for (int k = output->codes[i].length - 1; k >= 0;k--){
             printf("%d",(output->codes[i].code >> k) & 0b1);
         }
-        printf("\n");
+        printf(" %d \n",output->codes[i].code);
     }
     
     return 1;
@@ -134,35 +134,29 @@ int generateCodes(CPrefixCodeTable* table){
         maxLength = max(maxLength,table->codes[i].length);
     }
     //allocate extra elem bc codes with length 0 are the 0th element
-    uint16_t *lengths = calloc(maxLength+1,sizeof(uint16_t));
-    uint32_t *next_code = calloc(maxLength+1,sizeof(uint32_t));
+    uint16_t length_count[MAX_CODE_LENGTH] = {0};
+    uint16_t next_code[MAX_CODE_LENGTH] = {0};
 
-    if (lengths == NULL | next_code == NULL){
-        return -1; //out of memory
-    }
-    //count codes with length N
+    //for length N, count the number of codes with length N
     for (int i = 0; i < table->size;i++){
-        lengths[table->codes[i].length] += 1;
+        length_count[table->codes[i].length] += 1;
     }
     //initialize codes
-    uint32_t code = 0;
+    uint16_t code = 0;
+    length_count[0] = 0;
     for (int i = 1; i <= maxLength;i++){
-        code = (code + lengths[i-1]) << 1;
+        code = (code + length_count[i-1]) << 1;
         next_code[i] = code;
     }
     //assign codes to all literals
-    for (int i = 0; i < table->size;i++){
+    for (uint16_t i = 0; i < table->size;i++){
         //only assign codes with nonzero length
-        if (table->codes[i].length > 0){
-            table->codes[i].code = next_code[table->codes[i].length]++;
+        uint16_t length = table->codes[i].length;
+        if (length != 0){
+            table->codes[i].code = next_code[length];
+            next_code[length] += 1;
         }
     }
-
-    //qsort(&(table->codes[0]),table->size,sizeof(CPrefixCode),compareLength);
-
-    free(next_code);
-    free(lengths);
-
     return 1;
 }
 
@@ -189,8 +183,9 @@ uint16_t nextCode(uint8_t* buffer,uint64_t *ptr,CPrefixCodeTable* table){
     uint8_t length = 0;
     uint16_t code = 0;
     while(length <= maxLength){
-        code <<= 1;
-        code |= getBit(buffer,*ptr);
+        //code <<= 1;
+        //code |= getBit_r(buffer,*ptr);
+        code |= getBit_r(buffer,*ptr) << length;
         length++;
         *ptr = *ptr + 1;
         //search for matching prefix codes
@@ -205,6 +200,10 @@ uint16_t nextCode(uint8_t* buffer,uint64_t *ptr,CPrefixCodeTable* table){
             }
         }
     }
+    for (int i = 0; i < length;i++){
+        printf("%d",code>>i & 0b1);
+    }
+    printf("\n");
     return -1; //no matching codes found
 }
 
