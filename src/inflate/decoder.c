@@ -387,13 +387,13 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
             else if (code > END_OF_BLOCK){
                 //extra bits for length code
                 uint8_t extraBitsLength = EXTRA_BITS_LENGTH[code-257];
-                uint8_t length = getBitsLSB(src,ptr,extraBitsLength) + EXTRA_BITS_LENGTH_OFFSET[code-257]; 
+                uint16_t length = getBitsLSB(src,ptr,extraBitsLength) + EXTRA_BITS_LENGTH_OFFSET[code-257]; 
                 ptr += extraBitsLength;
                 //get distance code
                 uint16_t distanceCode = nextCode(src,&ptr,distanceAlphabet,30);
                 //extra bits for distance code
                 uint8_t extraBitsDistance = EXTRA_BITS_DISTANCE[distanceCode];
-                uint16_t distance = getBitsLSB(src,ptr,extraBitsDistance) + EXTRA_BITS_DISTANCE_OFFSET[distanceCode];
+                uint32_t distance = getBitsLSB(src,ptr,extraBitsDistance) + EXTRA_BITS_DISTANCE_OFFSET[distanceCode];
                 ptr += extraBitsDistance;
                 /*
                 printf("l%d (%d = %d + %d) d%d (%d = %d + %d) ebl%d ebd%d\n",
