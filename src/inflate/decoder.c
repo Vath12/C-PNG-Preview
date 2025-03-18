@@ -304,8 +304,7 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
             uint8_t numDistanceCodes= getBitsLSB(src,ptr+5,5)+1;
             uint8_t numCLCodes = getBitsLSB(src,ptr+10,4)+4;
             ptr += 14;
-            printf("%d %d %d\n\n",numLiteralLengthCodes,numDistanceCodes,numCLCodes);
-
+            
             struct prefixAlphabet clCodeAlphabet = {};
             clCodeAlphabet.code = calloc(19,sizeof(prefixCode));
 
@@ -319,13 +318,6 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
             }
             generateCodes(&clCodeAlphabet,19);
 
-            for (int i = 0; i < 19;i++){
-                printf("%d ",clCodeAlphabet.code[i].literal);
-                f_b(clCodeAlphabet.code[i].code,clCodeAlphabet.code[i].length);
-                printf("\n");
-            }
-            printf("\n");
-            printf("\n");
             uint8_t lastClCode = 0;
             int symbolCount = 0;
 
@@ -346,7 +338,7 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                 } else {
                     uint8_t runLength = extraBitOffset[clCode-16]+getBitsLSB(src,ptr,extraBits[clCode-16]);
                     uint8_t runSymbol = clCode == 16 ? lastClCode : 0;
-                    //printf("RLE %d %d\n",runLength,runSymbol);
+                
                     for (int i = 0; i < runLength;i++){
                         literalLengthAlphabet->code[symbolCount].length = runSymbol;
                         symbolCount++;
@@ -357,29 +349,10 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
             }
             generateCodes(literalLengthAlphabet,286);
             generateCodes(distanceAlphabet,30);
-
-            for (int i = 0; i < 286;i++){
-                if (literalLengthAlphabet->code[i].length == 0){
-                    continue;
-                }
-                printf("%d ",literalLengthAlphabet->code[i].literal);
-                f_b(literalLengthAlphabet->code[i].code,literalLengthAlphabet->code[i].length);
-                printf("\n");
-            }
-            printf("\n\ndistance\n\n");
-            for (int i = 0; i < 30;i++){
-                if (distanceAlphabet->code[i].length == 0){
-                    continue;
-                }
-                printf("%d ",distanceAlphabet->code[i].literal);
-                f_b(distanceAlphabet->code[i].code,distanceAlphabet->code[i].length);
-                printf("\n");
-            }
-            printf("\n");
+            
         }
         while (ptr/8 <= srcLength){
             uint16_t code = nextCode(src,&ptr,literalLengthAlphabet,286);
-            //printf("%d\n",code);
             if (code == END_OF_BLOCK){
                 //EOB
                 break;
@@ -395,39 +368,16 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                 uint8_t extraBitsDistance = EXTRA_BITS_DISTANCE[distanceCode];
                 uint32_t distance = getBitsLSB(src,ptr,extraBitsDistance) + EXTRA_BITS_DISTANCE_OFFSET[distanceCode];
                 ptr += extraBitsDistance;
-                /*
-                printf("l%d (%d = %d + %d) d%d (%d = %d + %d) ebl%d ebd%d\n",
-                    code-257,
-                    length,
-                    length-EXTRA_BITS_LENGTH_OFFSET[code-257],
-                    EXTRA_BITS_LENGTH_OFFSET[code-257],
-                    distanceCode,
-                    distance,
-                    getBitsLSB(src,ptr-extraBitsDistance,extraBitsDistance),
-                    EXTRA_BITS_DISTANCE_OFFSET[distanceCode],
-                    extraBitsLength,
-                    extraBitsDistance);
-                */
                 //LZSS  backreferencing
-                //printf("LD <d %d : %d , l %d : %d> [",distanceCode,distance,code,length);
-                //for (int i = distance; i >= 0;i--){
-                //    size_t index = ringBufferIndex(slidingWindowWrite,-i,slidingWindowSize);
-                //    uint8_t repeat = slidingWindow[index];
-                //    printf("%c",repeat);
-                //}
-                //printf("[");
                 for (int i = 0; i < length;i++){
                     //repeat literal
                     size_t index = ringBufferIndex(slidingWindowWrite,-distance,slidingWindowSize);
                     uint8_t repeat = slidingWindow[index];
-                    //printf("%c",repeat);
                     ringBufferWrite(repeat,slidingWindow,&slidingWindowWrite,slidingWindowSize);
                     appendToBuffer(repeat,out,&allocatedOutput,outputLength);
                 }
-                //printf("]\n");
 
             } else {
-                //printf("%c literal\n",code);
                 //literal
                 ringBufferWrite(code,slidingWindow,&slidingWindowWrite,slidingWindowSize);
                 appendToBuffer(code,out,&allocatedOutput,outputLength);
