@@ -62,10 +62,14 @@ static const uint8_t clCodeAssignmentOrder[] = {
     16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15
 };
 
+typedef struct {
+    uint16_t literal;
+    uint8_t length;
+    uint16_t code;
+} prefixCode;
+
 struct prefixAlphabet{
-    uint16_t *literals;
-    uint8_t *length;
-    uint16_t *codes;
+    prefixCode *code;
 };
 
 int max(a,b){
@@ -140,20 +144,24 @@ void ringBufferWrite(uint8_t value,uint8_t *ringBuffer,size_t *write,size_t size
     *write = ringBufferIndex(*write,1,size);
 }
 
+int comparePrefixCode(const void* A,const void* B){
+    return ((prefixCode*) A)->length - ((prefixCode*) B)->length;
+}
+
 //see rfc 1951 pg 7
 int generateCodes(struct prefixAlphabet *alphabet,uint16_t size){
     //count the number of distinct lengths present
     uint8_t maxLength = 0;
     for (int i = 0; i < size;i++){
-        alphabet->literals[i] = i;
-        maxLength = max(maxLength,alphabet->length[i]);
+        alphabet->code[i].literal = i;
+        maxLength = max(maxLength,alphabet->code[i].length);
     }
     //allocate extra elem bc codes with length 0 are the 0th element
     uint16_t length_count[MAX_CODE_LENGTH] = {0};
     uint16_t next_code[MAX_CODE_LENGTH] = {0};
     //for length N, count the number of codes with length N
     for (int i = 0; i < size;i++){
-        length_count[alphabet->length[i]] += 1;
+        length_count[alphabet->code[i].length] += 1;
     }
     //initialize codes
     uint16_t code = 0;
@@ -165,42 +173,38 @@ int generateCodes(struct prefixAlphabet *alphabet,uint16_t size){
     //assign codes to all literals
     for (uint16_t i = 0; i < size;i++){
         //only assign codes with nonzero length
-        uint16_t length = alphabet->length[i];
+        uint16_t length = alphabet->code[i].length;
         if (length != 0){
-            alphabet->codes[i] = next_code[length] & (((uint16_t) -1) >> (16-length));
+            alphabet->code[i].code = next_code[length] & (((uint16_t) -1) >> (16-length));
             next_code[length] += 1;
         }
     }
+    qsort(alphabet->code,size,sizeof(prefixCode),comparePrefixCode);
     return 1;
 }
 
-struct prefixAlphabet fixedLiteralLength = {NULL,NULL,NULL};
-struct prefixAlphabet fixedDistance = {NULL,NULL,NULL};
+struct prefixAlphabet fixedLiteralLength = {NULL};
+struct prefixAlphabet fixedDistance = {NULL};
 
 int generateFixedCodes()
 {
     printf("generate fixed codes\n");
-    fixedLiteralLength.literals = malloc(286 * sizeof(uint16_t));
-    fixedLiteralLength.length = malloc(286 * sizeof(uint8_t));
-    fixedLiteralLength.codes = malloc(286 * sizeof(uint16_t));
-    fixedDistance.literals = malloc(30 * sizeof(uint16_t));
-    fixedDistance.length = malloc(30 * sizeof(uint8_t));
-    fixedDistance.codes = malloc(30 * sizeof(uint16_t));
-
+    fixedLiteralLength.code = malloc(286 * sizeof(prefixCode));
+    fixedDistance.code = malloc(30 * sizeof(prefixCode));
     //TODO: check that malloc did not fail and return code if it did
 
     for (int i = 0; i < 30;i++){
-        fixedDistance.length[i] = 5;
+        fixedDistance.code[i].length = 5;
     }
     for (int i = 0; i < 286;i++){
         if (i < 144){
-            fixedLiteralLength.length[i] = 8;
+            fixedLiteralLength.code[i].length = 8;
         } else if (i < 256){
-            fixedLiteralLength.length[i] = 9;
+            fixedLiteralLength.code[i].length = 9;
         } else if (i < 280){
-            fixedLiteralLength.length[i] = 7;
+            fixedLiteralLength.code[i].length = 7;
         } else {
-            fixedLiteralLength.length[i] = 9;
+            fixedLiteralLength.code[i].length = 9;
         }
     }
 
@@ -227,8 +231,8 @@ uint16_t nextCode(
         //f_b(code,length);
         //printf("\n");
         for (int i = 0; i < alphabetSize; i++){
-            if (length == alphabet->length[i] && code == alphabet->codes[i]){
-                return alphabet->literals[i];
+            if (length == alphabet->code[i].length && code == alphabet->code[i].code){
+                return alphabet->code[i].literal;
             }
         }
     }
@@ -303,27 +307,21 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
             printf("%d %d %d\n\n",numLiteralLengthCodes,numDistanceCodes,numCLCodes);
 
             struct prefixAlphabet clCodeAlphabet = {};
-            clCodeAlphabet.length = calloc(19,sizeof(uint8_t));
-            clCodeAlphabet.literals = calloc(19,sizeof(uint16_t));
-            clCodeAlphabet.codes = calloc(19,sizeof(uint16_t));
+            clCodeAlphabet.code = calloc(19,sizeof(prefixCode));
 
-            literalLengthAlphabet->length = calloc(286,sizeof(uint8_t));
-            literalLengthAlphabet->codes = calloc(286,sizeof(uint16_t));
-            literalLengthAlphabet->literals = calloc(286,sizeof(uint16_t));
+            literalLengthAlphabet->code = calloc(286,sizeof(prefixCode));
 
-            distanceAlphabet->length = calloc(30,sizeof(uint8_t));
-            distanceAlphabet->codes = calloc(30,sizeof(uint16_t));
-            distanceAlphabet->literals = calloc(30,sizeof(uint16_t));
+            distanceAlphabet->code = calloc(30,sizeof(prefixCode));
             
             for (int i = 0; i < numCLCodes;i++){
-                clCodeAlphabet.length[clCodeAssignmentOrder[i]] = getBitsLSB(src,ptr,3);
+                clCodeAlphabet.code[clCodeAssignmentOrder[i]].length = getBitsLSB(src,ptr,3);
                 ptr+=3;
             }
             generateCodes(&clCodeAlphabet,19);
 
             for (int i = 0; i < 19;i++){
-                printf("%d ",clCodeAlphabet.literals[i]);
-                f_b(clCodeAlphabet.codes[i],clCodeAlphabet.length[i]);
+                printf("%d ",clCodeAlphabet.code[i].literal);
+                f_b(clCodeAlphabet.code[i].code,clCodeAlphabet.code[i].length);
                 printf("\n");
             }
             printf("\n");
@@ -338,9 +336,9 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                 uint8_t clCode = nextCode(src,&ptr,&clCodeAlphabet,19);
                 if (clCode <= 15){
                     if (symbolCount < numLiteralLengthCodes){
-                        literalLengthAlphabet->length[symbolCount] = clCode;
+                        literalLengthAlphabet->code[symbolCount].length = clCode;
                     } else {
-                        distanceAlphabet->length[symbolCount-286] = clCode;
+                        distanceAlphabet->code[symbolCount-286].length = clCode;
                     }
                     lastClCode = clCode;
 
@@ -348,9 +346,9 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                 } else {
                     uint8_t runLength = extraBitOffset[clCode-16]+getBitsLSB(src,ptr,extraBits[clCode-16]);
                     uint8_t runSymbol = clCode == 16 ? lastClCode : 0;
-                    printf("RLE %d %d\n",runLength,runSymbol);
+                    //printf("RLE %d %d\n",runLength,runSymbol);
                     for (int i = 0; i < runLength;i++){
-                        literalLengthAlphabet->length[symbolCount] = runSymbol;
+                        literalLengthAlphabet->code[symbolCount].length = runSymbol;
                         symbolCount++;
                     }
 
@@ -361,17 +359,27 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
             generateCodes(distanceAlphabet,30);
 
             for (int i = 0; i < 286;i++){
-                if (literalLengthAlphabet->length[i] == 0){
+                if (literalLengthAlphabet->code[i].length == 0){
                     continue;
                 }
-                printf("%d ",literalLengthAlphabet->literals[i]);
-                f_b(literalLengthAlphabet->codes[i],literalLengthAlphabet->length[i]);
+                printf("%d ",literalLengthAlphabet->code[i].literal);
+                f_b(literalLengthAlphabet->code[i].code,literalLengthAlphabet->code[i].length);
                 printf("\n");
             }
+            printf("\n\ndistance\n\n");
+            for (int i = 0; i < 30;i++){
+                if (distanceAlphabet->code[i].length == 0){
+                    continue;
+                }
+                printf("%d ",distanceAlphabet->code[i].literal);
+                f_b(distanceAlphabet->code[i].code,distanceAlphabet->code[i].length);
+                printf("\n");
+            }
+            printf("\n");
         }
-        while (ptr < srcLength*8){
+        while (ptr/8 <= srcLength){
             uint16_t code = nextCode(src,&ptr,literalLengthAlphabet,286);
-            printf("%d ",code);
+            printf("%d\n",code);
             if (code == END_OF_BLOCK){
                 //EOB
                 break;
@@ -389,8 +397,9 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                 uint8_t distance = 
                     getBitsLSB(src,ptr,extraBitsDistance) + EXTRA_BITS_DISTANCE_OFFSET[distanceCode];
                 ptr += extraBitsDistance;
+                printf("l%dd%d\n",code-257,distanceCode);
                 //LZSS  backreferencing
-      
+                
                 //printf("LD <d %d : %d , l %d : %d> [",distanceCode,distance,code,length);
                 //for (int i = distance; i >= 0;i--){
                 //    size_t index = ringBufferIndex(slidingWindowWrite,-i,slidingWindowSize);
@@ -402,11 +411,11 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                     //repeat literal
                     size_t index = ringBufferIndex(slidingWindowWrite,-distance,slidingWindowSize);
                     uint8_t repeat = slidingWindow[index];
-                    printf("%c",repeat);
+                    //printf("%c",repeat);
                     ringBufferWrite(repeat,slidingWindow,&slidingWindowWrite,slidingWindowSize);
                     appendToBuffer(repeat,out,&allocatedOutput,outputLength);
                 }
-                printf("]\n");
+                //printf("]\n");
 
             } else {
                 //printf("%c literal\n",code);
@@ -418,14 +427,10 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
         }
         if (blockType == 2){
             //free dynamic prefix code tables
-            free(literalLengthAlphabet->codes);
-            free(literalLengthAlphabet->literals);
-            free(literalLengthAlphabet->length);
+            free(literalLengthAlphabet->code);
             free(literalLengthAlphabet);
 
-            free(distanceAlphabet->codes);
-            free(distanceAlphabet->literals);
-            free(distanceAlphabet->length);
+            free(distanceAlphabet->code);
             free(distanceAlphabet);
         }
 
@@ -436,12 +441,8 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
     //truncate memory garbage at the end
     *out = realloc(*out,*outputLength);
 
-    free(fixedLiteralLength.codes);
-    free(fixedLiteralLength.length);
-    free(fixedLiteralLength.literals);
-    free(fixedDistance.codes);
-    free(fixedDistance.length);
-    free(fixedDistance.literals);
+    free(fixedLiteralLength.code);
+    free(fixedDistance.code);
     free(slidingWindow);
 
     return 1;

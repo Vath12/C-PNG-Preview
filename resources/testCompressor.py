@@ -89,8 +89,7 @@ I will permit you to use the brake, My beautiful Daisy Bell!
 ""","ASCII")
 
 basic = bytes("Hello World, Hello Mark, Hello Jean!","ASCII")
-
-compressed = zlib.compress(daisy)
+compressed = zlib.compress(astley)
 with open("resources/testFile","wb") as f:
     f.write(compressed)
     
