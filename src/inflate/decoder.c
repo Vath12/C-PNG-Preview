@@ -291,12 +291,37 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
     if (blockType==3){
         return -3;//invalid blocktype
     }
-    if (blockType != 0){
+    if (blockType == 0){
+         //block is uncompressed, the implicit size limit is 65536 because the length is 2 bytes
+        //rfc 1951 sec 3.2.4
+        //align pointer to next byte boundary
+        if (ptr % 8 != 0){
+            ptr = ( (ptr/8) + 1) * 8;
+        }
+        uint16_t blockSize = getBitsLSB(src,ptr,16);
+        uint16_t blockSizeCheck = ~((uint16_t) getBitsLSB(src,ptr,16));
+        ptr+=16;
+        if (blockSize != blockSizeCheck){
+            return -4; //uncompressed block length was invalid
+        }
+        //weird and bad, FIX SOON
+        allocatedOutput += blockSize;
+        *out = realloc(*out,allocatedOutput);
+        size_t writeBegin = (*out) + *outputLength;
+        size_t readBegin = &src[(ptr/8)];
+        memcpy(writeBegin,readBegin,blockSize);
+        *outputLength = *outputLength + blockSize;
+        ptr += blockSize;
+    }
+    else{
+        //block is compressed using prefix codes and LZSS
+        //prefix alphabets point to the fixed codes because that is the default
+        //TODO: ensure malloc actually allocates the requested memory and return code if not
         struct prefixAlphabet *literalLengthAlphabet = &fixedLiteralLength;
         struct prefixAlphabet *distanceAlphabet = &fixedDistance;
 
         if (blockType == 2){
-
+            //block is compressed using dynamically specified prefix codes
             literalLengthAlphabet = malloc(sizeof(struct prefixAlphabet));
             distanceAlphabet = malloc(sizeof(struct prefixAlphabet));
 
@@ -304,7 +329,7 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
             uint8_t numDistanceCodes= getBitsLSB(src,ptr+5,5)+1;
             uint8_t numCLCodes = getBitsLSB(src,ptr+10,4)+4;
             ptr += 14;
-            
+
             struct prefixAlphabet clCodeAlphabet = {};
             clCodeAlphabet.code = calloc(19,sizeof(prefixCode));
 
@@ -392,8 +417,6 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
             free(distanceAlphabet);
         }
 
-    } else {
-        
     }
 
     //truncate memory garbage at the end
