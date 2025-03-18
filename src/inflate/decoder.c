@@ -127,7 +127,7 @@ uint32_t getBitsLSB(uint8_t *buffer,uint64_t ptr,uint8_t num){
 void f_b(uint64_t value,const uint8_t numBits){
     printf("0b");
     for (int i = 0; i < numBits;i++){
-        printf("%d",(value >> (numBits-i-1)) & 1);
+        printf("%llu",(value >> (numBits-i-1)) & 1);
     }
 }
 
@@ -379,7 +379,7 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
         }
         while (ptr/8 <= srcLength){
             uint16_t code = nextCode(src,&ptr,literalLengthAlphabet,286);
-            printf("%d\n",code);
+            //printf("%d\n",code);
             if (code == END_OF_BLOCK){
                 //EOB
                 break;
@@ -387,19 +387,28 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
             else if (code > END_OF_BLOCK){
                 //extra bits for length code
                 uint8_t extraBitsLength = EXTRA_BITS_LENGTH[code-257];
-                uint8_t length = 
-                    getBitsLSB(src,ptr,extraBitsLength) + EXTRA_BITS_LENGTH_OFFSET[code-257]; 
+                uint8_t length = getBitsLSB(src,ptr,extraBitsLength) + EXTRA_BITS_LENGTH_OFFSET[code-257]; 
                 ptr += extraBitsLength;
                 //get distance code
                 uint16_t distanceCode = nextCode(src,&ptr,distanceAlphabet,30);
                 //extra bits for distance code
                 uint8_t extraBitsDistance = EXTRA_BITS_DISTANCE[distanceCode];
-                uint8_t distance = 
-                    getBitsLSB(src,ptr,extraBitsDistance) + EXTRA_BITS_DISTANCE_OFFSET[distanceCode];
+                uint16_t distance = getBitsLSB(src,ptr,extraBitsDistance) + EXTRA_BITS_DISTANCE_OFFSET[distanceCode];
                 ptr += extraBitsDistance;
-                printf("l%dd%d\n",code-257,distanceCode);
+                /*
+                printf("l%d (%d = %d + %d) d%d (%d = %d + %d) ebl%d ebd%d\n",
+                    code-257,
+                    length,
+                    length-EXTRA_BITS_LENGTH_OFFSET[code-257],
+                    EXTRA_BITS_LENGTH_OFFSET[code-257],
+                    distanceCode,
+                    distance,
+                    getBitsLSB(src,ptr-extraBitsDistance,extraBitsDistance),
+                    EXTRA_BITS_DISTANCE_OFFSET[distanceCode],
+                    extraBitsLength,
+                    extraBitsDistance);
+                */
                 //LZSS  backreferencing
-                
                 //printf("LD <d %d : %d , l %d : %d> [",distanceCode,distance,code,length);
                 //for (int i = distance; i >= 0;i--){
                 //    size_t index = ringBufferIndex(slidingWindowWrite,-i,slidingWindowSize);
@@ -419,7 +428,6 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
 
             } else {
                 //printf("%c literal\n",code);
-                //printf("%c",code);
                 //literal
                 ringBufferWrite(code,slidingWindow,&slidingWindowWrite,slidingWindowSize);
                 appendToBuffer(code,out,&allocatedOutput,outputLength);
