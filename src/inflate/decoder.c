@@ -237,8 +237,8 @@ void appendToBuffer(uint8_t value, uint8_t **buffer, size_t *allocatedSize, size
         *allocatedSize = *allocatedSize+8129;
         *buffer = realloc(*buffer,*allocatedSize);
     }
-    *length = *length+1;
     (*buffer)[*length] = value;
+    *length = *length+1;
 }
 
 int inflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
