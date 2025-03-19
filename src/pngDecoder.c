@@ -75,8 +75,9 @@ int readPNG(char path[]){
 
     for (int i = 0; i < uncompressedSize;i++){
         //f_b(uncompressed[i],8);
-        printf("%x ",uncompressed[i]);
+        printf("%d ",uncompressed[i]);
     }
+    printf("\n");
 
     //header.heightx
     for (uint16_t row = 0;row<2;row++){
@@ -89,9 +90,9 @@ int readPNG(char path[]){
                 image[pixel].r = color.r;
                 image[pixel].g = color.g;
                 image[pixel].b = color.b;
+                printf("PLTE[%x]: ",getBitsMSB(uncompressed,imgPtr,header.bitDepth));
+                printf("%d %d %d\n",image[pixel].r,image[pixel].g,image[pixel].b);
                 imgPtr+=header.bitDepth;
-                printf("%d ",getBitsMSB(uncompressed,imgPtr,header.bitDepth));
-                //printf("%d %d %d\n",image[pixel].r,image[pixel].g,image[pixel].b);
                 pixel++;
                 continue;
             }
