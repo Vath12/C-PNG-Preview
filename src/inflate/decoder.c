@@ -248,7 +248,7 @@ void appendToBuffer(uint8_t value, uint8_t **buffer, size_t *allocatedSize, size
     (*buffer)[*length] = value;
 }
 
-int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
+int inflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
     uint64_t ptr = 0;
     //this is separate from *outputLength because 
     //memory is re-allocated in blocks of 8129 as needed
@@ -394,30 +394,17 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                     //extra bits for distance code
                     uint8_t extraBitsDistance = EXTRA_BITS_DISTANCE[distanceCode];
                     uint32_t distance = getBitsLSB(src,ptr,extraBitsDistance) + EXTRA_BITS_DISTANCE_OFFSET[distanceCode];
-                    /*
-                    if (distanceCode == 29){
-                        appendToBuffer('[',out,&allocatedOutput,outputLength);
-                        appendToBuffer('b',out,&allocatedOutput,outputLength);
-                        appendToBuffer('u',out,&allocatedOutput,outputLength);
-                        appendToBuffer('g',out,&allocatedOutput,outputLength);
-                        appendToBuffer(']',out,&allocatedOutput,outputLength);
-                        printf("%lu %llu %d %d %d\n",
-                            slidingWindowWrite,
-                            *outputLength,
-                            distance,
-                            getBitsLSB(src,ptr,extraBitsDistance),
-                            EXTRA_BITS_DISTANCE_OFFSET[distanceCode]);
-                    }
-                    */
+                    
                     ptr += extraBitsDistance;
-                    /*appendToBuffer(27,out,&allocatedOutput,outputLength);
+
+                    appendToBuffer(27,out,&allocatedOutput,outputLength);
                     appendToBuffer('[',out,&allocatedOutput,outputLength);
                     appendToBuffer('3',out,&allocatedOutput,outputLength);
                     appendToBuffer(49+color++,out,&allocatedOutput,outputLength);
                     color %= 5;
                     appendToBuffer(';',out,&allocatedOutput,outputLength);
                     appendToBuffer('4',out,&allocatedOutput,outputLength);
-                    appendToBuffer('m',out,&allocatedOutput,outputLength);*/
+                    appendToBuffer('m',out,&allocatedOutput,outputLength);
 
                     //LZSS  backreferencing
                     for (int i = 0; i < length;i++){
@@ -427,10 +414,10 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                         ringBufferWrite(repeat,slidingWindow,&slidingWindowWrite,slidingWindowSize);
                         appendToBuffer(repeat,out,&allocatedOutput,outputLength);
                     }
-                    /*appendToBuffer(27,out,&allocatedOutput,outputLength);
+                    appendToBuffer(27,out,&allocatedOutput,outputLength);
                     appendToBuffer('[',out,&allocatedOutput,outputLength);
                     appendToBuffer('0',out,&allocatedOutput,outputLength);
-                    appendToBuffer('m',out,&allocatedOutput,outputLength);*/
+                    appendToBuffer('m',out,&allocatedOutput,outputLength);
 
                 } else {
                     //literal

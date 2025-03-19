@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "fileIO.h"
-#include "canonicalPrefix.h"
-#include "inflate.h"
 #include "pngDecoder.h"
 #include "inflate/decoder.h"
 
@@ -13,7 +11,7 @@ int main(){
     readFile("../resources/testFile",&fileData,&size);
     uint8_t *uncompressed = NULL;
     size_t outputSize = 0;
-    printf("deflate exited with code %d\n",deflate(&uncompressed,&outputSize,fileData,size));
+    printf("inflate exited with code %d\n",inflate(&uncompressed,&outputSize,fileData,size));
 
     //for (int i = 0; i < outputSize && i < 1 << 12;i++){
     //    printf("%c",uncompressed[i]);
