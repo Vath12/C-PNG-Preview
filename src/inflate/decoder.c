@@ -5,8 +5,29 @@
 
 const int MAX_CODE_LENGTH = 15;
 const uint16_t END_OF_BLOCK = 256;
+/*
+The EXTRA_BITS_XX and EXTRA_BITS_XX_OFFSET define the behavior listed 
+in rfc section 3.2.5 (page 11). 
 
-//see rfc section 3.2.5 (page 11)
+LZSS length distance pairs are encoded using two alphabets
+
+The length is specified by literals 257-285 which are encoded
+in the primary length/literal prefix code alphabet.
+
+After a length come a certain number of "extra bits"
+these are defined in the array EXTRA_BITS_LENGTH 
+where the index corresponds to the literal value - 257
+
+The value of these extra bits is then offset by an amount
+specified by EXTRA_BITS_DISTANCE_OFFSET, 
+where the index corresponds to the literal value - 257
+
+Following this is a prefix code from the distance code alphabet
+These are values 0-29. The same process of reading extra bits 
+and offsetting them is the same for the distance as for the length.
+The only difference is that you use the distance code to index 
+the EXTRA_BITS_DISTANCE and EXTRA_BITS_DISTANCE_OFFSET tables.
+*/
 //correspond to values 257-285
 const uint8_t EXTRA_BITS_LENGTH[] = {
     0,0,0,0,0,0,0,0,
@@ -106,6 +127,9 @@ output: 0001
 uint8_t getBit(uint8_t *buffer,uint64_t ptr){
     return (buffer[ptr/8] >> (ptr%8)) & 0b1;
 }
+/*
+Can potentially be removed
+*/
 uint32_t getBitsMSB(uint8_t *buffer,uint64_t ptr,uint8_t num){
     uint32_t out = 0;
     for (uint8_t i = 0; i < num; i++){
@@ -114,6 +138,9 @@ uint32_t getBitsMSB(uint8_t *buffer,uint64_t ptr,uint8_t num){
     }   
     return out;
 }
+/*
+The zlib format packs values LSB first
+*/
 uint32_t getBitsLSB(uint8_t *buffer,uint64_t ptr,uint8_t num){
     uint32_t out = 0;
     for (uint8_t i = 0; i < num; i++){
@@ -131,7 +158,6 @@ void f_b(uint64_t value,const uint8_t numBits){
     }
 }
 
-
 size_t ringBufferIndex(size_t current,int64_t offset,size_t size){
     if (offset < 0){
         offset = size+(offset % size);
@@ -143,12 +169,18 @@ void ringBufferWrite(uint8_t value,uint8_t *ringBuffer,size_t *write,size_t size
     ringBuffer[*write] = value;
     *write = ringBufferIndex(*write,1,size);
 }
-
+//used to qsort prefix codes
 int comparePrefixCode(const void* A,const void* B){
     return ((prefixCode*) A)->length - ((prefixCode*) B)->length;
 }
+/*
+see rfc 1951 pg 7
 
-//see rfc 1951 pg 7
+This algorithm produces canonical prefix codes 
+given code lengths specified by the input alphabet. 
+the alphabet's literals are set to their indices so 
+you shouldn't set them prior to generating codes
+*/
 int generateCodes(struct prefixAlphabet *alphabet,uint16_t size){
     //count the number of distinct lengths present
     uint8_t maxLength = 0;
@@ -185,7 +217,10 @@ int generateCodes(struct prefixAlphabet *alphabet,uint16_t size){
 
 struct prefixAlphabet fixedLiteralLength = {NULL};
 struct prefixAlphabet fixedDistance = {NULL};
-
+/*
+DEFLATE uses predefined code lengths to 
+generate prefix codes for block type 1
+*/
 int generateFixedCodes()
 {
     printf("generate fixed codes\n");
@@ -214,7 +249,11 @@ int generateFixedCodes()
     }
     return generateCodes(&fixedDistance, 30);    
 }
-
+/*
+Read the next prefix code from the given
+bitstream and increment the given pointer by
+the length of the code
+*/
 uint16_t nextCode(
     uint8_t *src, 
     uint64_t *ptr,
