@@ -7,7 +7,7 @@
 #include "inflate/decoder.h"
 
 int main(){
-    
+
     uint8_t *fileData = NULL;
     size_t size = 0;
     readFile("../resources/testFile",&fileData,&size);

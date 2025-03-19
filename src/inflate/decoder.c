@@ -273,6 +273,8 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
     printf("Compression Level: %d\n",compressionLevel);
     printf("Valid: %d\n",isValid);
 
+    uint8_t color = 0;
+
     if (!isValid){
         return -2; //invalid stream header
     }
@@ -393,7 +395,15 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                 uint8_t extraBitsDistance = EXTRA_BITS_DISTANCE[distanceCode];
                 uint32_t distance = getBitsLSB(src,ptr,extraBitsDistance) + EXTRA_BITS_DISTANCE_OFFSET[distanceCode];
                 ptr += extraBitsDistance;
-                //printf("l%d d%d l%d d%d\n",code,distanceCode,length,distance);
+
+                appendToBuffer(27,out,&allocatedOutput,outputLength);
+                appendToBuffer('[',out,&allocatedOutput,outputLength);
+                appendToBuffer('3',out,&allocatedOutput,outputLength);
+                appendToBuffer(49+color++,out,&allocatedOutput,outputLength);
+                color %= 5;
+                appendToBuffer(';',out,&allocatedOutput,outputLength);
+                appendToBuffer('4',out,&allocatedOutput,outputLength);
+                appendToBuffer('m',out,&allocatedOutput,outputLength);
 
                 //LZSS  backreferencing
                 for (int i = 0; i < length;i++){
@@ -403,6 +413,11 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                     ringBufferWrite(repeat,slidingWindow,&slidingWindowWrite,slidingWindowSize);
                     appendToBuffer(repeat,out,&allocatedOutput,outputLength);
                 }
+                appendToBuffer(27,out,&allocatedOutput,outputLength);
+                appendToBuffer('[',out,&allocatedOutput,outputLength);
+                appendToBuffer('0',out,&allocatedOutput,outputLength);
+                //appendToBuffer('9',out,&allocatedOutput,outputLength);
+                appendToBuffer('m',out,&allocatedOutput,outputLength);
 
             } else {
                 //literal
