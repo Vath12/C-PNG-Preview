@@ -1,4 +1,5 @@
 #include "decoder.h"
+#include "../util.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -96,17 +97,6 @@ struct prefixAlphabet{
 int max(a,b){
     return a>b ? a:b;
 }
-/*
-needed because bytes being in network order
-cause both memcpy and casting a pointer to reverse the result
-*/
-static void revmemcpy(void *dest, void *src, size_t length){
-    char *d = dest;
-    char *s = src;
-    for (int i = 0; i < length; i++){
-        d[i] = s[length-1-i];
-    }
-}
 
 /*
 bits are read from the byte in this order:
@@ -124,39 +114,6 @@ ex.
 read 4 bits from 00001000
 output: 0001
 */
-uint8_t getBit(uint8_t *buffer,uint64_t ptr){
-    return (buffer[ptr/8] >> (ptr%8)) & 0b1;
-}
-/*
-Can potentially be removed
-*/
-uint32_t getBitsMSB(uint8_t *buffer,uint64_t ptr,uint8_t num){
-    uint32_t out = 0;
-    for (uint8_t i = 0; i < num; i++){
-        out <<= 1;
-        out |= getBit(buffer,ptr+i);
-    }   
-    return out;
-}
-/*
-The zlib format packs values LSB first
-*/
-uint32_t getBitsLSB(uint8_t *buffer,uint64_t ptr,uint8_t num){
-    uint32_t out = 0;
-    for (uint8_t i = 0; i < num; i++){
-        out <<= 1;
-        out |= getBit(buffer,ptr+num-i-1);
-    }   
-    return out;
-}
-
-//print bits
-void f_b(uint64_t value,const uint8_t numBits){
-    printf("0b");
-    for (int i = 0; i < numBits;i++){
-        printf("%llu",(value >> (numBits-i-1)) & 1);
-    }
-}
 
 size_t ringBufferIndex(size_t current,int64_t offset,size_t size){
     if (offset < 0){
@@ -182,36 +139,33 @@ the alphabet's literals are set to their indices so
 you shouldn't set them prior to generating codes
 */
 int generateCodes(struct prefixAlphabet *alphabet,uint16_t size){
-    //count the number of distinct lengths present
-    uint8_t maxLength = 0;
-    for (int i = 0; i < size;i++){
-        alphabet->code[i].literal = i;
-        maxLength = max(maxLength,alphabet->code[i].length);
-    }
-    //allocate extra elem bc codes with length 0 are the 0th element
     uint16_t length_count[MAX_CODE_LENGTH] = {0};
     uint16_t next_code[MAX_CODE_LENGTH] = {0};
     //for length N, count the number of codes with length N
-    for (int i = 0; i < size;i++){
+    for (int i = 0; i <= size;i++){
+        alphabet->code[i].literal = i;
         length_count[alphabet->code[i].length] += 1;
     }
     //initialize codes
     uint16_t code = 0;
     length_count[0] = 0;
-    for (int i = 1; i <= maxLength;i++){
-        code = (code + length_count[i-1]) << 1;
-        next_code[i] = code;
+    for (int i = 2; i <= MAX_CODE_LENGTH;i++){
+        //code = (next_code[i-1] + length_count[i-1]) << 1;
+        //next_code[i] = code;
+        next_code[i] = (next_code[i-1] + length_count[i-1]) << 1;
     }
+    uint16_t lastL = 0;
     //assign codes to all literals
     for (uint16_t i = 0; i < size;i++){
         //only assign codes with nonzero length
         uint16_t length = alphabet->code[i].length;
+        lastL = length;
         if (length != 0){
-            alphabet->code[i].code = next_code[length] & (((uint16_t) -1) >> (16-length));
+            alphabet->code[i].code = next_code[length];
             next_code[length] += 1;
         }
+        
     }
-    qsort(alphabet->code,size,sizeof(prefixCode),comparePrefixCode);
     return 1;
 }
 
@@ -224,26 +178,26 @@ generate prefix codes for block type 1
 int generateFixedCodes()
 {
     printf("generate fixed codes\n");
-    fixedLiteralLength.code = malloc(286 * sizeof(prefixCode));
+    fixedLiteralLength.code = malloc(287 * sizeof(prefixCode));
     fixedDistance.code = malloc(30 * sizeof(prefixCode));
     //TODO: check that malloc did not fail and return code if it did
 
     for (int i = 0; i < 30;i++){
         fixedDistance.code[i].length = 5;
     }
-    for (int i = 0; i < 286;i++){
-        if (i < 144){
+    for (int i = 0; i <= 287;i++){
+        if (i <= 143){
             fixedLiteralLength.code[i].length = 8;
-        } else if (i < 256){
+        } else if (i <= 255){
             fixedLiteralLength.code[i].length = 9;
-        } else if (i < 280){
+        } else if (i <= 279){
             fixedLiteralLength.code[i].length = 7;
         } else {
-            fixedLiteralLength.code[i].length = 9;
+            fixedLiteralLength.code[i].length = 8;
         }
     }
-
-    int success = generateCodes(&fixedLiteralLength, 286);
+    
+    int success = generateCodes(&fixedLiteralLength, 287);
     if (!success){
         return success;
     }
@@ -321,14 +275,23 @@ int inflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
     if (!generateFixedCodes()){
         return -3; //fixed code generation failed
     }
-
+    /*
+    for (int i = 0; i < 287;i++){
+        if (fixedLiteralLength.code[i].length == 0){
+            continue;
+        }
+        printf("%d ",fixedLiteralLength.code[i].literal);
+        f_b(fixedLiteralLength.code[i].code,fixedLiteralLength.code[i].length);
+        printf("\n");
+    }
+    */
     uint8_t isLast = 0;
     while (!isLast){
         isLast = getBitsLSB(src,ptr,1);
         uint8_t blockType = getBitsLSB(src,ptr+1,2);
         ptr += 3;
 
-        printf("isLast : %d\n",isLast);
+        //printf("isLast : %d\n",isLast);
         printf("blockType : %d\n",blockType);
 
         if (blockType==3){
@@ -436,14 +399,14 @@ int inflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                     
                     ptr += extraBitsDistance;
 
-                    appendToBuffer(27,out,&allocatedOutput,outputLength);
-                    appendToBuffer('[',out,&allocatedOutput,outputLength);
-                    appendToBuffer('3',out,&allocatedOutput,outputLength);
-                    appendToBuffer(49+color++,out,&allocatedOutput,outputLength);
-                    color %= 5;
-                    appendToBuffer(';',out,&allocatedOutput,outputLength);
-                    appendToBuffer('4',out,&allocatedOutput,outputLength);
-                    appendToBuffer('m',out,&allocatedOutput,outputLength);
+                    //appendToBuffer(27,out,&allocatedOutput,outputLength);
+                    //appendToBuffer('[',out,&allocatedOutput,outputLength);
+                    //appendToBuffer('3',out,&allocatedOutput,outputLength);
+                    //appendToBuffer(49+color++,out,&allocatedOutput,outputLength);
+                    //color %= 5;
+                    //appendToBuffer(';',out,&allocatedOutput,outputLength);
+                    //appendToBuffer('4',out,&allocatedOutput,outputLength);
+                    //appendToBuffer('m',out,&allocatedOutput,outputLength);
 
                     //LZSS  backreferencing
                     for (int i = 0; i < length;i++){
@@ -453,13 +416,14 @@ int inflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                         ringBufferWrite(repeat,slidingWindow,&slidingWindowWrite,slidingWindowSize);
                         appendToBuffer(repeat,out,&allocatedOutput,outputLength);
                     }
-                    appendToBuffer(27,out,&allocatedOutput,outputLength);
-                    appendToBuffer('[',out,&allocatedOutput,outputLength);
-                    appendToBuffer('0',out,&allocatedOutput,outputLength);
-                    appendToBuffer('m',out,&allocatedOutput,outputLength);
+                    //appendToBuffer(27,out,&allocatedOutput,outputLength);
+                    //appendToBuffer('[',out,&allocatedOutput,outputLength);
+                    //appendToBuffer('0',out,&allocatedOutput,outputLength);
+                    //appendToBuffer('m',out,&allocatedOutput,outputLength);
 
                 } else {
                     //literal
+                    printf(" %d ",code);
                     ringBufferWrite(code,slidingWindow,&slidingWindowWrite,slidingWindowSize);
                     appendToBuffer(code,out,&allocatedOutput,outputLength);
                 }
