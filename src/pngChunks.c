@@ -1,21 +1,10 @@
 #include "pngChunks.h"
+#include "util.h"
 #include <string.h>
 
 const char* CHUNK_CODE_IHDR = "IHDR";
 const char* CHUNK_CODE_IDAT = "IDAT";
 const char* CHUNK_CODE_PLTE = "PLTE";
-
-/*
-needed because all the bytes are in network order
-so both memcpy and casting a pointer reverse the result
-*/
-static void revmemcpy(void *dest, void *src, size_t length){
-    char *d = dest;
-    char *s = src;
-    for (int i = 0; i < length; i++){
-        d[i] = s[length-1-i];
-    }
-}
 
 //TODO: improve aesthetic of ptr+= (very yucky)
 ChunkData readChunk(uint8_t *stream,uint32_t ptr){
@@ -42,8 +31,21 @@ int parseIHDR(ChunkData* c, IHDR *output){
     output->bitDepth = c->chunkData[8];
     output->colorType = c->chunkData[9];
     output->compressionMethod = c->chunkData[10];
-
-
+    switch (output->colorType){
+        case 2:
+            output->valuesPerPixel = 3;
+            break;
+        case 4:
+            output->valuesPerPixel = 2;
+            break;
+        case 6:
+            output->valuesPerPixel = 4;
+            break;
+        default:
+            output->valuesPerPixel = 1;
+            break;
+    }
+    output->bitsPerPixel = output->bitDepth * output->valuesPerPixel;
     return 1;
 }
 int parseIDAT(ChunkData* c, IDAT *output){
@@ -60,7 +62,7 @@ int parseIDAT(ChunkData* c, IDAT *output){
     return 1;
 }
 int parsePLTE(ChunkData* c, PLTE *output){
-    memcpy(&output,c->chunkData,c->length);
+    memcpy(&(output->colors),c->chunkData,c->length);
     return 1;
 }
 

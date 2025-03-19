@@ -13,11 +13,18 @@ W3C Recommendation 01-October-1996
 https://www.w3.org/TR/PNG-Chunks.html
 */
 
-typedef struct RGB{
-    uint16_t R;
-    uint16_t G;
-    uint16_t B;
-} RGB;
+typedef struct RGB8{
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+} RGB8;
+
+typedef struct RGBA{
+    uint32_t r;
+    uint32_t g;
+    uint32_t b;
+    uint32_t a;
+} RGBA;
 
 typedef struct ChunkData {
     uint32_t length;
@@ -51,8 +58,10 @@ typedef struct IHDR{
                                 followed by an alpha sample.
     */
     uint8_t bitDepth;
+    uint8_t valuesPerPixel;
     uint8_t colorType;
     uint8_t compressionMethod;
+    uint8_t bitsPerPixel;
 } IHDR;
 
 
@@ -64,7 +73,7 @@ The PLTE chunk contains from 1 to 256 palette entries, each a three-byte series 
 
 */
 typedef struct PLTE {
-    RGB colors[256];
+    RGB8 colors[256];
 } PLTE;
 
 /*

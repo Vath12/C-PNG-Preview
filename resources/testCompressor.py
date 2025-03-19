@@ -88,11 +88,20 @@ I will permit you to use the brake, My beautiful Daisy Bell!
 (Chorus)
 ""","ASCII")
 
+with open("resources/image4.png","rb") as f:
+    stream = f.read()
+    with open("resources/testFile","wb") as f:
+        f.write(stream[115:134])
+    stream = zlib.decompress(stream[115:134])
+    for b in stream:
+        print(f"{b:x} {int(b)}")
+
+
 alice = ""
 with open("resources/alice.txt","rb") as f:
     alice = f.read()
 basic = bytes("Hello World, Hello Mark, Hello Jean!","ASCII")
 compressed = zlib.compress(alice)
-with open("resources/testFile","wb") as f:
-    f.write(compressed)
+#with open("resources/testFile","wb") as f:
+    #f.write(compressed)
     
