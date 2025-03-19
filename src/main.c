@@ -4,6 +4,7 @@
 #include "pngDecoder.h"
 #include "util.h"
 #include "inflate/decoder.h"
+#include "SDL3/SDL.h"
 
 int main(){
 
