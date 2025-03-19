@@ -132,9 +132,9 @@ void f_b(uint64_t value,const uint8_t numBits){
 }
 
 
-size_t ringBufferIndex(size_t current,long long offset,size_t size){
+size_t ringBufferIndex(size_t current,int64_t offset,size_t size){
     if (offset < 0){
-        offset = size+(offset%size);
+        offset = size+(offset % size);
     }
     return (current + offset) % size;
 }
@@ -264,7 +264,7 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
     uint16_t isValid = (((src[0] << 8) | src[1]) % 31) == 0;
     ptr+=16;
 
-    slidingWindowSize = 1 << (compressionInfo+7);
+    slidingWindowSize = 1 << (compressionInfo+8);
     slidingWindow = malloc( slidingWindowSize );
 
     printf("Compression Method: %d\n",compressionMethod);
@@ -308,14 +308,12 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
             if (blockSize != blockSizeCheck){
                 return -4; //uncompressed block length was invalid
             }
-            //weird and bad, FIX SOON
-            allocatedOutput += blockSize;
-            //*out = realloc(*out,allocatedOutput);
-            //size_t writeBegin = (*out) + *outputLength;
-            //size_t readBegin = &src[(ptr/8)];
-            //memcpy(writeBegin,readBegin,blockSize);
-            //*outputLength = *outputLength + blockSize;
-            ptr += blockSize;
+            //read data MSB first
+            for (int i = 0; i < blockSize;i++){
+                uint8_t byte = getBitsMSB(src,ptr,8);
+                appendToBuffer(byte,out,allocatedOutput,outputLength);
+                ptr+=8;
+            }
         }
         else{
             //block is compressed using prefix codes and LZSS
@@ -396,16 +394,28 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                     //extra bits for distance code
                     uint8_t extraBitsDistance = EXTRA_BITS_DISTANCE[distanceCode];
                     uint32_t distance = getBitsLSB(src,ptr,extraBitsDistance) + EXTRA_BITS_DISTANCE_OFFSET[distanceCode];
+                    if (distanceCode == 29){
+                        appendToBuffer('[',out,&allocatedOutput,outputLength);
+                        appendToBuffer('b',out,&allocatedOutput,outputLength);
+                        appendToBuffer('u',out,&allocatedOutput,outputLength);
+                        appendToBuffer('g',out,&allocatedOutput,outputLength);
+                        appendToBuffer(']',out,&allocatedOutput,outputLength);
+                        printf("%lu %llu %d %d %d\n",
+                            slidingWindowWrite,
+                            *outputLength,
+                            distance,
+                            getBitsLSB(src,ptr,extraBitsDistance),
+                            EXTRA_BITS_DISTANCE_OFFSET[distanceCode]);
+                    }
                     ptr += extraBitsDistance;
-
-                    appendToBuffer(27,out,&allocatedOutput,outputLength);
+                    /*appendToBuffer(27,out,&allocatedOutput,outputLength);
                     appendToBuffer('[',out,&allocatedOutput,outputLength);
                     appendToBuffer('3',out,&allocatedOutput,outputLength);
                     appendToBuffer(49+color++,out,&allocatedOutput,outputLength);
                     color %= 5;
                     appendToBuffer(';',out,&allocatedOutput,outputLength);
                     appendToBuffer('4',out,&allocatedOutput,outputLength);
-                    appendToBuffer('m',out,&allocatedOutput,outputLength);
+                    appendToBuffer('m',out,&allocatedOutput,outputLength);*/
 
                     //LZSS  backreferencing
                     for (int i = 0; i < length;i++){
@@ -415,11 +425,10 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                         ringBufferWrite(repeat,slidingWindow,&slidingWindowWrite,slidingWindowSize);
                         appendToBuffer(repeat,out,&allocatedOutput,outputLength);
                     }
-                    appendToBuffer(27,out,&allocatedOutput,outputLength);
+                    /*appendToBuffer(27,out,&allocatedOutput,outputLength);
                     appendToBuffer('[',out,&allocatedOutput,outputLength);
                     appendToBuffer('0',out,&allocatedOutput,outputLength);
-                    //appendToBuffer('9',out,&allocatedOutput,outputLength);
-                    appendToBuffer('m',out,&allocatedOutput,outputLength);
+                    appendToBuffer('m',out,&allocatedOutput,outputLength);*/
 
                 } else {
                     //literal

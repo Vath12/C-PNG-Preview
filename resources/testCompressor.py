@@ -88,8 +88,11 @@ I will permit you to use the brake, My beautiful Daisy Bell!
 (Chorus)
 ""","ASCII")
 
+alice = ""
+with open("resources/alice.txt","rb") as f:
+    alice = f.read()
 basic = bytes("Hello World, Hello Mark, Hello Jean!","ASCII")
-compressed = zlib.compress(astley)
+compressed = zlib.compress(alice)
 with open("resources/testFile","wb") as f:
     f.write(compressed)
     

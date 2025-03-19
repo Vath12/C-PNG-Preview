@@ -15,10 +15,12 @@ int main(){
     size_t outputSize = 0;
     printf("deflate exited with code %d\n",deflate(&uncompressed,&outputSize,fileData,size));
 
-    for (int i = 0; i < outputSize;i++){
+    for (int i = 0; i < outputSize && i < 1 << 12;i++){
         printf("%c",uncompressed[i]);
     }
     printf("\n");
+
+    writeFile("../resources/testFileUncompressed.txt",uncompressed,outputSize);
 
     free(uncompressed);
     free(fileData);
