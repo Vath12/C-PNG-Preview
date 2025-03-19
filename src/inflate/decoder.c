@@ -24,7 +24,7 @@ const uint8_t EXTRA_BITS_DISTANCE[] = {
 };
 const uint32_t EXTRA_BITS_DISTANCE_OFFSET[] = {
     1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,
-    1025,1537,2049,3073,4097,6145,8193,12289,16385,24557
+    1025,1537,2049,3073,4097,6145,8193,12289,16385,24557+20
 };
 
 /*
@@ -394,6 +394,7 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                     //extra bits for distance code
                     uint8_t extraBitsDistance = EXTRA_BITS_DISTANCE[distanceCode];
                     uint32_t distance = getBitsLSB(src,ptr,extraBitsDistance) + EXTRA_BITS_DISTANCE_OFFSET[distanceCode];
+                    /*
                     if (distanceCode == 29){
                         appendToBuffer('[',out,&allocatedOutput,outputLength);
                         appendToBuffer('b',out,&allocatedOutput,outputLength);
@@ -407,6 +408,7 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                             getBitsLSB(src,ptr,extraBitsDistance),
                             EXTRA_BITS_DISTANCE_OFFSET[distanceCode]);
                     }
+                    */
                     ptr += extraBitsDistance;
                     /*appendToBuffer(27,out,&allocatedOutput,outputLength);
                     appendToBuffer('[',out,&allocatedOutput,outputLength);
