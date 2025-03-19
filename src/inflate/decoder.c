@@ -283,157 +283,159 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
         return -3; //fixed code generation failed
     }
 
-    uint8_t isLast = getBitsLSB(src,ptr,1);
-    uint8_t blockType = getBitsLSB(src,ptr+1,2);
-    ptr += 3;
+    uint8_t isLast = 0;
+    while (!isLast){
+        isLast = getBitsLSB(src,ptr,1);
+        uint8_t blockType = getBitsLSB(src,ptr+1,2);
+        ptr += 3;
 
-    printf("isLast : %d\n",isLast);
-    printf("blockType : %d\n",blockType);
-    
-    if (blockType==3){
-        return -3;//invalid blocktype
-    }
-    if (blockType == 0){
-         //block is uncompressed, the implicit size limit is 65536 because the length is 2 bytes
-        //rfc 1951 sec 3.2.4
-        //align pointer to next byte boundary
-        if (ptr % 8 != 0){
-            ptr = ( (ptr/8) + 1) * 8;
+        printf("isLast : %d\n",isLast);
+        printf("blockType : %d\n",blockType);
+
+        if (blockType==3){
+            return -3;//invalid blocktype
         }
-        uint16_t blockSize = getBitsLSB(src,ptr,16);
-        uint16_t blockSizeCheck = ~((uint16_t) getBitsLSB(src,ptr,16));
-        ptr+=16;
-        if (blockSize != blockSizeCheck){
-            return -4; //uncompressed block length was invalid
-        }
-        //weird and bad, FIX SOON
-        allocatedOutput += blockSize;
-        //*out = realloc(*out,allocatedOutput);
-        //size_t writeBegin = (*out) + *outputLength;
-        //size_t readBegin = &src[(ptr/8)];
-        //memcpy(writeBegin,readBegin,blockSize);
-        //*outputLength = *outputLength + blockSize;
-        ptr += blockSize;
-    }
-    else{
-        //block is compressed using prefix codes and LZSS
-        //prefix alphabets point to the fixed codes because that is the default
-        //TODO: ensure malloc actually allocates the requested memory and return code if not
-        struct prefixAlphabet *literalLengthAlphabet = &fixedLiteralLength;
-        struct prefixAlphabet *distanceAlphabet = &fixedDistance;
-
-        if (blockType == 2){
-            //block is compressed using dynamically specified prefix codes
-            literalLengthAlphabet = malloc(sizeof(struct prefixAlphabet));
-            distanceAlphabet = malloc(sizeof(struct prefixAlphabet));
-
-            uint16_t numLiteralLengthCodes = getBitsLSB(src,ptr,5)+257;
-            uint8_t numDistanceCodes= getBitsLSB(src,ptr+5,5)+1;
-            uint8_t numCLCodes = getBitsLSB(src,ptr+10,4)+4;
-            ptr += 14;
-
-            struct prefixAlphabet clCodeAlphabet = {};
-            clCodeAlphabet.code = calloc(19,sizeof(prefixCode));
-
-            literalLengthAlphabet->code = calloc(286,sizeof(prefixCode));
-
-            distanceAlphabet->code = calloc(30,sizeof(prefixCode));
-            for (int i = 0; i < numCLCodes;i++){
-                clCodeAlphabet.code[clCodeAssignmentOrder[i]].length = getBitsLSB(src,ptr,3);
-                ptr+=3;
+        if (blockType == 0){
+            //block is uncompressed, the implicit size limit is 65536 because the length is 2 bytes
+            //rfc 1951 sec 3.2.4
+            //align pointer to next byte boundary
+            if (ptr % 8 != 0){
+                ptr = ( (ptr/8) + 1) * 8;
             }
-            generateCodes(&clCodeAlphabet,19);
+            uint16_t blockSize = getBitsLSB(src,ptr,16);
+            uint16_t blockSizeCheck = ~((uint16_t) getBitsLSB(src,ptr,16));
+            ptr+=16;
+            if (blockSize != blockSizeCheck){
+                return -4; //uncompressed block length was invalid
+            }
+            //weird and bad, FIX SOON
+            allocatedOutput += blockSize;
+            //*out = realloc(*out,allocatedOutput);
+            //size_t writeBegin = (*out) + *outputLength;
+            //size_t readBegin = &src[(ptr/8)];
+            //memcpy(writeBegin,readBegin,blockSize);
+            //*outputLength = *outputLength + blockSize;
+            ptr += blockSize;
+        }
+        else{
+            //block is compressed using prefix codes and LZSS
+            //prefix alphabets point to the fixed codes because that is the default
+            //TODO: ensure malloc actually allocates the requested memory and return code if not
+            struct prefixAlphabet *literalLengthAlphabet = &fixedLiteralLength;
+            struct prefixAlphabet *distanceAlphabet = &fixedDistance;
 
-            uint8_t lastClCode = 0;
-            int symbolCount = 0;
+            if (blockType == 2){
+                //block is compressed using dynamically specified prefix codes
+                literalLengthAlphabet = malloc(sizeof(struct prefixAlphabet));
+                distanceAlphabet = malloc(sizeof(struct prefixAlphabet));
 
-            const uint8_t extraBits[] = {2,3,7};
-            const uint8_t extraBitOffset[] = {3,3,11};
+                uint16_t numLiteralLengthCodes = getBitsLSB(src,ptr,5)+257;
+                uint8_t numDistanceCodes= getBitsLSB(src,ptr+5,5)+1;
+                uint8_t numCLCodes = getBitsLSB(src,ptr+10,4)+4;
+                ptr += 14;
 
-            while (symbolCount < numLiteralLengthCodes+numDistanceCodes){
-                uint8_t clCode = nextCode(src,&ptr,&clCodeAlphabet,19);
-                if (clCode <= 15){
-                    if (symbolCount < numLiteralLengthCodes){
-                        literalLengthAlphabet->code[symbolCount].length = clCode;
-                    } else {
-                        distanceAlphabet->code[symbolCount-numLiteralLengthCodes].length = clCode;
-                    }
-                    lastClCode = clCode;
+                struct prefixAlphabet clCodeAlphabet = {};
+                clCodeAlphabet.code = calloc(19,sizeof(prefixCode));
 
-                    symbolCount++;
-                } else {
-                    uint8_t runLength = extraBitOffset[clCode-16]+getBitsLSB(src,ptr,extraBits[clCode-16]);
-                    uint8_t runSymbol = clCode == 16 ? lastClCode : 0;
-                    for (int i = 0; i < runLength;i++){
+                literalLengthAlphabet->code = calloc(286,sizeof(prefixCode));
+
+                distanceAlphabet->code = calloc(30,sizeof(prefixCode));
+                for (int i = 0; i < numCLCodes;i++){
+                    clCodeAlphabet.code[clCodeAssignmentOrder[i]].length = getBitsLSB(src,ptr,3);
+                    ptr+=3;
+                }
+                generateCodes(&clCodeAlphabet,19);
+
+                uint8_t lastClCode = 0;
+                int symbolCount = 0;
+
+                const uint8_t extraBits[] = {2,3,7};
+                const uint8_t extraBitOffset[] = {3,3,11};
+
+                while (symbolCount < numLiteralLengthCodes+numDistanceCodes){
+                    uint8_t clCode = nextCode(src,&ptr,&clCodeAlphabet,19);
+                    if (clCode <= 15){
                         if (symbolCount < numLiteralLengthCodes){
-                            literalLengthAlphabet->code[symbolCount].length = runSymbol;
+                            literalLengthAlphabet->code[symbolCount].length = clCode;
                         } else {
-                            distanceAlphabet->code[symbolCount-numLiteralLengthCodes].length = runSymbol;
+                            distanceAlphabet->code[symbolCount-numLiteralLengthCodes].length = clCode;
                         }
+                        lastClCode = clCode;
+
                         symbolCount++;
+                    } else {
+                        uint8_t runLength = extraBitOffset[clCode-16]+getBitsLSB(src,ptr,extraBits[clCode-16]);
+                        uint8_t runSymbol = clCode == 16 ? lastClCode : 0;
+                        for (int i = 0; i < runLength;i++){
+                            if (symbolCount < numLiteralLengthCodes){
+                                literalLengthAlphabet->code[symbolCount].length = runSymbol;
+                            } else {
+                                distanceAlphabet->code[symbolCount-numLiteralLengthCodes].length = runSymbol;
+                            }
+                            symbolCount++;
+                        }
+                        ptr += extraBits[clCode-16];
                     }
-                    ptr += extraBits[clCode-16];
+                }
+                generateCodes(literalLengthAlphabet,286);
+                generateCodes(distanceAlphabet,30);            
+            }
+            while (ptr/8 <= srcLength){
+                uint16_t code = nextCode(src,&ptr,literalLengthAlphabet,286);
+                if (code == END_OF_BLOCK){
+                    //EOB
+                    break;
+                }
+                else if (code > END_OF_BLOCK){
+                    //extra bits for length code
+                    uint8_t extraBitsLength = EXTRA_BITS_LENGTH[code-257];
+                    uint16_t length = getBitsLSB(src,ptr,extraBitsLength) + EXTRA_BITS_LENGTH_OFFSET[code-257]; 
+                    ptr += extraBitsLength;
+                    //get distance code
+                    uint16_t distanceCode = nextCode(src,&ptr,distanceAlphabet,30);
+                    //extra bits for distance code
+                    uint8_t extraBitsDistance = EXTRA_BITS_DISTANCE[distanceCode];
+                    uint32_t distance = getBitsLSB(src,ptr,extraBitsDistance) + EXTRA_BITS_DISTANCE_OFFSET[distanceCode];
+                    ptr += extraBitsDistance;
+
+                    appendToBuffer(27,out,&allocatedOutput,outputLength);
+                    appendToBuffer('[',out,&allocatedOutput,outputLength);
+                    appendToBuffer('3',out,&allocatedOutput,outputLength);
+                    appendToBuffer(49+color++,out,&allocatedOutput,outputLength);
+                    color %= 5;
+                    appendToBuffer(';',out,&allocatedOutput,outputLength);
+                    appendToBuffer('4',out,&allocatedOutput,outputLength);
+                    appendToBuffer('m',out,&allocatedOutput,outputLength);
+
+                    //LZSS  backreferencing
+                    for (int i = 0; i < length;i++){
+                        //repeat literal
+                        size_t index = ringBufferIndex(slidingWindowWrite,-distance,slidingWindowSize);
+                        uint8_t repeat = slidingWindow[index];
+                        ringBufferWrite(repeat,slidingWindow,&slidingWindowWrite,slidingWindowSize);
+                        appendToBuffer(repeat,out,&allocatedOutput,outputLength);
+                    }
+                    appendToBuffer(27,out,&allocatedOutput,outputLength);
+                    appendToBuffer('[',out,&allocatedOutput,outputLength);
+                    appendToBuffer('0',out,&allocatedOutput,outputLength);
+                    //appendToBuffer('9',out,&allocatedOutput,outputLength);
+                    appendToBuffer('m',out,&allocatedOutput,outputLength);
+
+                } else {
+                    //literal
+                    ringBufferWrite(code,slidingWindow,&slidingWindowWrite,slidingWindowSize);
+                    appendToBuffer(code,out,&allocatedOutput,outputLength);
                 }
             }
-            generateCodes(literalLengthAlphabet,286);
-            generateCodes(distanceAlphabet,30);            
-        }
-        while (ptr/8 <= srcLength){
-            uint16_t code = nextCode(src,&ptr,literalLengthAlphabet,286);
-            if (code == END_OF_BLOCK){
-                //EOB
-                break;
-            }
-            else if (code > END_OF_BLOCK){
-                //extra bits for length code
-                uint8_t extraBitsLength = EXTRA_BITS_LENGTH[code-257];
-                uint16_t length = getBitsLSB(src,ptr,extraBitsLength) + EXTRA_BITS_LENGTH_OFFSET[code-257]; 
-                ptr += extraBitsLength;
-                //get distance code
-                uint16_t distanceCode = nextCode(src,&ptr,distanceAlphabet,30);
-                //extra bits for distance code
-                uint8_t extraBitsDistance = EXTRA_BITS_DISTANCE[distanceCode];
-                uint32_t distance = getBitsLSB(src,ptr,extraBitsDistance) + EXTRA_BITS_DISTANCE_OFFSET[distanceCode];
-                ptr += extraBitsDistance;
+            if (blockType == 2){
+                //free dynamic prefix code tables
+                free(literalLengthAlphabet->code);
+                free(literalLengthAlphabet);
 
-                appendToBuffer(27,out,&allocatedOutput,outputLength);
-                appendToBuffer('[',out,&allocatedOutput,outputLength);
-                appendToBuffer('3',out,&allocatedOutput,outputLength);
-                appendToBuffer(49+color++,out,&allocatedOutput,outputLength);
-                color %= 5;
-                appendToBuffer(';',out,&allocatedOutput,outputLength);
-                appendToBuffer('4',out,&allocatedOutput,outputLength);
-                appendToBuffer('m',out,&allocatedOutput,outputLength);
-
-                //LZSS  backreferencing
-                for (int i = 0; i < length;i++){
-                    //repeat literal
-                    size_t index = ringBufferIndex(slidingWindowWrite,-distance,slidingWindowSize);
-                    uint8_t repeat = slidingWindow[index];
-                    ringBufferWrite(repeat,slidingWindow,&slidingWindowWrite,slidingWindowSize);
-                    appendToBuffer(repeat,out,&allocatedOutput,outputLength);
-                }
-                appendToBuffer(27,out,&allocatedOutput,outputLength);
-                appendToBuffer('[',out,&allocatedOutput,outputLength);
-                appendToBuffer('0',out,&allocatedOutput,outputLength);
-                //appendToBuffer('9',out,&allocatedOutput,outputLength);
-                appendToBuffer('m',out,&allocatedOutput,outputLength);
-
-            } else {
-                //literal
-                ringBufferWrite(code,slidingWindow,&slidingWindowWrite,slidingWindowSize);
-                appendToBuffer(code,out,&allocatedOutput,outputLength);
+                free(distanceAlphabet->code);
+                free(distanceAlphabet);
             }
         }
-        if (blockType == 2){
-            //free dynamic prefix code tables
-            free(literalLengthAlphabet->code);
-            free(literalLengthAlphabet);
-
-            free(distanceAlphabet->code);
-            free(distanceAlphabet);
-        }
-
     }
 
     //truncate memory garbage at the end
