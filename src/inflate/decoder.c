@@ -22,7 +22,7 @@ const uint16_t EXTRA_BITS_LENGTH_OFFSET[] = {
 const uint8_t EXTRA_BITS_DISTANCE[] = {
     0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13
 };
-const uint16_t EXTRA_BITS_DISTANCE_OFFSET[] = {
+const uint32_t EXTRA_BITS_DISTANCE_OFFSET[] = {
     1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,
     1025,1537,2049,3073,4097,6145,8193,12289,16385,24557
 };
@@ -306,11 +306,11 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
         }
         //weird and bad, FIX SOON
         allocatedOutput += blockSize;
-        *out = realloc(*out,allocatedOutput);
-        size_t writeBegin = (*out) + *outputLength;
-        size_t readBegin = &src[(ptr/8)];
-        memcpy(writeBegin,readBegin,blockSize);
-        *outputLength = *outputLength + blockSize;
+        //*out = realloc(*out,allocatedOutput);
+        //size_t writeBegin = (*out) + *outputLength;
+        //size_t readBegin = &src[(ptr/8)];
+        //memcpy(writeBegin,readBegin,blockSize);
+        //*outputLength = *outputLength + blockSize;
         ptr += blockSize;
     }
     else{
@@ -336,7 +336,6 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
             literalLengthAlphabet->code = calloc(286,sizeof(prefixCode));
 
             distanceAlphabet->code = calloc(30,sizeof(prefixCode));
-            
             for (int i = 0; i < numCLCodes;i++){
                 clCodeAlphabet.code[clCodeAssignmentOrder[i]].length = getBitsLSB(src,ptr,3);
                 ptr+=3;
@@ -355,7 +354,7 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                     if (symbolCount < numLiteralLengthCodes){
                         literalLengthAlphabet->code[symbolCount].length = clCode;
                     } else {
-                        distanceAlphabet->code[symbolCount-286].length = clCode;
+                        distanceAlphabet->code[symbolCount-numLiteralLengthCodes].length = clCode;
                     }
                     lastClCode = clCode;
 
@@ -363,18 +362,19 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                 } else {
                     uint8_t runLength = extraBitOffset[clCode-16]+getBitsLSB(src,ptr,extraBits[clCode-16]);
                     uint8_t runSymbol = clCode == 16 ? lastClCode : 0;
-                
                     for (int i = 0; i < runLength;i++){
-                        literalLengthAlphabet->code[symbolCount].length = runSymbol;
+                        if (symbolCount < numLiteralLengthCodes){
+                            literalLengthAlphabet->code[symbolCount].length = runSymbol;
+                        } else {
+                            distanceAlphabet->code[symbolCount-numLiteralLengthCodes].length = runSymbol;
+                        }
                         symbolCount++;
                     }
-
                     ptr += extraBits[clCode-16];
                 }
             }
             generateCodes(literalLengthAlphabet,286);
-            generateCodes(distanceAlphabet,30);
-            
+            generateCodes(distanceAlphabet,30);            
         }
         while (ptr/8 <= srcLength){
             uint16_t code = nextCode(src,&ptr,literalLengthAlphabet,286);
@@ -393,6 +393,8 @@ int deflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                 uint8_t extraBitsDistance = EXTRA_BITS_DISTANCE[distanceCode];
                 uint32_t distance = getBitsLSB(src,ptr,extraBitsDistance) + EXTRA_BITS_DISTANCE_OFFSET[distanceCode];
                 ptr += extraBitsDistance;
+                //printf("l%d d%d l%d d%d\n",code,distanceCode,length,distance);
+
                 //LZSS  backreferencing
                 for (int i = 0; i < length;i++){
                     //repeat literal

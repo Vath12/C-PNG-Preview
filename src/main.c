@@ -22,6 +22,7 @@ int main(){
 
     free(uncompressed);
     free(fileData);
+
     
     //printf("readPNG exited with code: %d\n",readPNG("../resources/image.png"));
     /*
