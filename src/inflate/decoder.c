@@ -177,7 +177,6 @@ generate prefix codes for block type 1
 */
 int generateFixedCodes()
 {
-    printf("generate fixed codes\n");
     fixedLiteralLength.code = malloc(287 * sizeof(prefixCode));
     fixedDistance.code = malloc(30 * sizeof(prefixCode));
     //TODO: check that malloc did not fail and return code if it did
@@ -275,18 +274,12 @@ int inflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
     if (!generateFixedCodes()){
         return -3; //fixed code generation failed
     }
-    /*
-    for (int i = 0; i < 287;i++){
-        if (fixedLiteralLength.code[i].length == 0){
-            continue;
-        }
-        printf("%d ",fixedLiteralLength.code[i].literal);
-        f_b(fixedLiteralLength.code[i].code,fixedLiteralLength.code[i].length);
-        printf("\n");
-    }
-    */
+
     uint8_t isLast = 0;
-    do {
+    while (!isLast){
+        if (ptr >= srcLength*8){
+            return -8;//read error
+        }
         isLast = getBitsLSB(src,ptr,1);
         uint8_t blockType = getBitsLSB(src,ptr+1,2);
         ptr += 3;
@@ -313,7 +306,7 @@ int inflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
             //read data MSB first
             for (int i = 0; i < blockSize;i++){
                 uint8_t byte = getBitsMSB(src,ptr,8);
-                appendToBuffer(byte,out,allocatedOutput,outputLength);
+                appendToBuffer(byte,out,&allocatedOutput,outputLength);
                 ptr+=8;
             }
         }
@@ -436,7 +429,7 @@ int inflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                 free(distanceAlphabet);
             }
         }
-    } while (!isLast);
+    }
 
     //truncate memory garbage at the end
     *out = realloc(*out,*outputLength);

@@ -16,7 +16,7 @@ int main(int argc, char *argv[]){
     RGBA *image = NULL;
     uint16_t w,h = 0;
     if (argc <= 1){
-        printf("readPNG exited with code: %d\n",readPNG("../resources/image.png",&image,&w,&h));
+        printf("readPNG exited with code: %d\n",readPNG("../resources/image2.png",&image,&w,&h));
     } else {
         printf("reading: %s\n",argv[1]);
         printf("readPNG exited with code: %d\n",readPNG(argv[1],&image,&w,&h));
