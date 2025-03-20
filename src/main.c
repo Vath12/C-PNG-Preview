@@ -14,7 +14,7 @@ int main(int argc, char *argv[]){
     }
 
     RGBA *image = NULL;
-    uint16_t w,h = 0;
+    uint16_t w = 0,h = 0;
     char *path = "../resources/image.png";
     if (argc > 1){
         path = argv[1];
@@ -40,8 +40,7 @@ int main(int argc, char *argv[]){
     uint32_t *pixels = img->pixels;
     int i = 0;
     for (int y = 0; y < h; y++){
-        for (int x = 0; x < h; x++){
-            //printf("%d %d %d\n",image[i].r,image[i].g,image[i].b);
+        for (int x = 0; x < w; x++){
             pixels[i] = SDL_MapSurfaceRGB(img,image[i].r,image[i].g,image[i].b);
             i++;
         }
