@@ -9,28 +9,34 @@
 int main(int argc, char *argv[]){
 
     if (!SDL_Init(SDL_INIT_VIDEO)){
-        printf("SDL Init failed");
+        printf("SDL init failed");
         return -1;
     }
 
     RGBA *image = NULL;
     uint16_t w,h = 0;
-    if (argc <= 1){
-        printf("readPNG exited with code: %d\n",readPNG("../resources/image2.png",&image,&w,&h));
-    } else {
-        printf("reading: %s\n",argv[1]);
-        printf("readPNG exited with code: %d\n",readPNG(argv[1],&image,&w,&h));
-    }
+    char *path = "../resources/image.png";
+    if (argc > 1){
+        path = argv[1];
+    };
+
+    printf("readPNG exited with code: %d\n",readPNG(path,&image,&w,&h));
 
     SDL_Window *window = SDL_CreateWindow("PNG viewer",w,h,SDL_WINDOW_RESIZABLE);
 
     if (window == NULL){
-        printf("Window Creation Failed!");
+        printf("Window Cceation failed!");
         return -2;
     }
 
     SDL_Surface *screen = SDL_GetWindowSurface(window);
     SDL_Surface *img = SDL_CreateSurface(w,h,SDL_PIXELFORMAT_RGBA8888);
+
+    if (img == NULL){
+        printf("Surface creation failed");
+        return -3;
+    }
+
     uint32_t *pixels = img->pixels;
     int i = 0;
     for (int y = 0; y < h; y++){
@@ -40,15 +46,37 @@ int main(int argc, char *argv[]){
             i++;
         }
     }
+    float aspectRatio = (float)h/(float)w;
+    int displayCount = 0;
+    SDL_DisplayID *displays  = SDL_GetDisplays(&displayCount);
+    if (displayCount <= 0){
+        printf("failed to get display information\n");
+        return -1;
+    }
+    /*
+    const SDL_DisplayMode *displayInfo = SDL_GetCurrentDisplayMode(displays[0]);
+    SDL_SetWindowAspectRatio(window,aspectRatio,aspectRatio);
+    SDL_SetWindowMinimumSize(window,100,100*aspectRatio);
+    if (w>=h && aspectRatio > 0){
+        SDL_SetWindowMaximumSize(window,displayInfo->w,displayInfo->w*aspectRatio);
+    } else {
+        SDL_SetWindowMaximumSize(window,displayInfo->h/aspectRatio,displayInfo->h);
+    }
+    */
 
     uint8_t run = 1;
     while (run){
 
         SDL_Event event;
         while (SDL_PollEvent(&event)){
-            if (event.type == SDL_EVENT_QUIT){
-                run = 0;
+            switch (event.type){
+                case SDL_EVENT_QUIT:
+                    run = 0;
+                    break;
+                case SDL_EVENT_WINDOW_RESIZED:
+                    break;
             }
+
         }
         SDL_Rect screenRect = {0,0,screen->w,screen->h};
         SDL_FillSurfaceRect(screen,&screenRect,(Uint32) -1);
@@ -61,6 +89,7 @@ int main(int argc, char *argv[]){
     free(image);
     SDL_DestroySurface(img);
     SDL_DestroySurface(screen);
+    SDL_free(displays);
     SDL_Quit();
     
     return 0;

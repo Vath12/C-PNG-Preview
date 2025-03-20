@@ -179,7 +179,10 @@ int generateFixedCodes()
 {
     fixedLiteralLength.code = malloc(287 * sizeof(prefixCode));
     fixedDistance.code = malloc(30 * sizeof(prefixCode));
-    //TODO: check that malloc did not fail and return code if it did
+
+    if (fixedLiteralLength.code == NULL || fixedDistance.code == NULL){
+        return -1; //out of memory
+    }
 
     for (int i = 0; i < 30;i++){
         fixedDistance.code[i].length = 5;
@@ -258,6 +261,9 @@ int inflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
 
     slidingWindowSize = 1 << (compressionInfo+8);
     slidingWindow = malloc( slidingWindowSize );
+    if (slidingWindow == NULL){
+        return -4; //sliding window allocation failed
+    }
 
     printf("Compression Method: %d\n",compressionMethod);
     printf("Compression Info: %d\n",compressionInfo);
@@ -319,20 +325,30 @@ int inflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
 
             if (blockType == 2){
                 //block is compressed using dynamically specified prefix codes
-                literalLengthAlphabet = malloc(sizeof(struct prefixAlphabet));
-                distanceAlphabet = malloc(sizeof(struct prefixAlphabet));
+                struct prefixAlphabet clCodeAlphabet = {};
 
                 uint16_t numLiteralLengthCodes = getBitsLSB(src,ptr,5)+257;
                 uint8_t numDistanceCodes= getBitsLSB(src,ptr+5,5)+1;
                 uint8_t numCLCodes = getBitsLSB(src,ptr+10,4)+4;
                 ptr += 14;
 
-                struct prefixAlphabet clCodeAlphabet = {};
+                literalLengthAlphabet = malloc(sizeof(struct prefixAlphabet));
+                distanceAlphabet = malloc(sizeof(struct prefixAlphabet));
                 clCodeAlphabet.code = calloc(19,sizeof(prefixCode));
-
                 literalLengthAlphabet->code = calloc(286,sizeof(prefixCode));
-
                 distanceAlphabet->code = calloc(30,sizeof(prefixCode));
+
+                if (
+                    literalLengthAlphabet == NULL || 
+                    distanceAlphabet == NULL || 
+                    clCodeAlphabet.code == NULL ||
+                    literalLengthAlphabet->code == NULL ||
+                    distanceAlphabet->code == NULL
+                ){
+                    return -2; //out of memory
+                }
+
+
                 for (int i = 0; i < numCLCodes;i++){
                     clCodeAlphabet.code[clCodeAssignmentOrder[i]].length = getBitsLSB(src,ptr,3);
                     ptr+=3;

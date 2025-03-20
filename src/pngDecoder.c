@@ -57,7 +57,10 @@ void unfilter(uint8_t filter,uint8_t *prior,uint8_t *current,uint8_t bytesPerPix
     }
 
 }
-
+/*
+This method will dereference the original image pointer so make sure the memory is freed 
+if you've previously dynamically allocated it.
+*/
 int readPNG(char path[],RGBA **image,uint16_t *width, uint16_t *height){
     uint8_t* rawData;
     size_t size;
@@ -79,7 +82,7 @@ int readPNG(char path[],RGBA **image,uint16_t *width, uint16_t *height){
     uint32_t ptr = 8;
     IHDR header = {};
     IDAT data = {};
-    data.buffer = malloc(0);
+    data.buffer = NULL;
     PLTE pallate = {};
     uint8_t usePallate = 0;
     while (ptr < size){
@@ -90,7 +93,7 @@ int readPNG(char path[],RGBA **image,uint16_t *width, uint16_t *height){
 
         if (strcmp(c.code,CHUNK_CODE_IDAT) == 0){
            if (!parseIDAT(&c,&data)){
-                return -64;// out of memory  
+                return -4;// out of memory  
            }
         } else if (strcmp(c.code,CHUNK_CODE_IHDR) == 0){
             parseIHDR(&c,&header);
@@ -103,21 +106,26 @@ int readPNG(char path[],RGBA **image,uint16_t *width, uint16_t *height){
         
     }
     //printf("Compressed image data size: %dkb\n",data.size/1000);
-    uint8_t* uncompressed = malloc(0);
+    uint8_t* uncompressed = NULL;
     size_t uncompressedSize = 0;
 
-    printf("inflate exited with code %d\n",inflate(&uncompressed,&uncompressedSize,data.buffer,data.size));
+    int result = inflate(&uncompressed,&uncompressedSize,data.buffer,data.size);
+    if (!result){
+        return result;
+    }
 
     uint64_t imgPtr = 0;
     uint32_t pixel = 0;
     *image = calloc(header.width*header.height,sizeof(RGBA));
+    if (image == NULL){
+        return -4;// out of memory  
+    }
     *width = header.width;
     *height = header.height;
 
     uint8_t bytesPerPixel = header.bitsPerPixel/8;
     bytesPerPixel = bytesPerPixel==0? 1:bytesPerPixel;
 
-    printf("bd:%d x%d,%d",header.bitDepth,header.valuesPerPixel,bytesPerPixel);
     uint8_t *prior = NULL;
     for (uint16_t row = 0;row<header.height;row++){
         uint8_t filter = uncompressed[imgPtr/8];
@@ -158,7 +166,6 @@ int readPNG(char path[],RGBA **image,uint16_t *width, uint16_t *height){
             imgPtr = (imgPtr/8 + 1)*8;
         }
     }
-    
 
     free(uncompressed);
     free(data.buffer);
