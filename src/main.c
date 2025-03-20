@@ -22,7 +22,7 @@ int main(int argc, char *argv[]){
         printf("readPNG exited with code: %d\n",readPNG(argv[1],&image,&w,&h));
     }
 
-    SDL_Window *window = SDL_CreateWindow("PNG viewer",w,h,0);
+    SDL_Window *window = SDL_CreateWindow("PNG viewer",w,h,SDL_WINDOW_RESIZABLE);
 
     if (window == NULL){
         printf("Window Creation Failed!");

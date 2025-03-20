@@ -286,7 +286,7 @@ int inflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
     }
     */
     uint8_t isLast = 0;
-    while (!isLast){
+    do {
         isLast = getBitsLSB(src,ptr,1);
         uint8_t blockType = getBitsLSB(src,ptr+1,2);
         ptr += 3;
@@ -436,7 +436,7 @@ int inflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                 free(distanceAlphabet);
             }
         }
-    }
+    } while (!isLast);
 
     //truncate memory garbage at the end
     *out = realloc(*out,*outputLength);

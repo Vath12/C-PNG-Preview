@@ -15,17 +15,47 @@ PNG chunks are handled in the pngChunks.h and c files
 */
 
 uint8_t paeth(uint8_t a,uint8_t b,uint8_t c){
-    uint8_t p = a+b-c;
-    uint16_t da = (a-p)*(a-p);
-    uint16_t db = (b-p)*(b-p);
-    uint16_t dc = (c-p)*(c-p);
+    int p = a+b-c;
+    int da = abs(p-a);
+    int db = abs(p-b);
+    int dc = abs(p-c);
     
-    if (da < db){
-        if (da < dc){
-            return a;
+    if (da <= db && da <= dc){return a;}
+    if (db <= dc){return b;}
+    return c;
+}
+
+void unfilter(uint8_t filter,uint8_t *prior,uint8_t *current,uint8_t bytesPerPixel,uint16_t width){
+
+    for (uint16_t i = 0; i < (width*bytesPerPixel);i++){
+        uint8_t left = 0,up = 0,leftUp = 0;
+        if (i>0){
+            left = current[i-1];
         }
+        if (prior != NULL) {
+            up = prior[i];
+        }
+        if (prior != NULL && i > 0) {
+            leftUp = prior[i-1];
+        }
+        
+        switch (filter){
+            case 1: //sub
+                current[i] += left;
+                break;
+            case 2: //up
+                current[i] += up;
+                break;
+            case 3: //average
+                current[i] += (up+left) >>1;
+                break;
+            case 4: //paeth
+                current[i] += paeth(left,up,leftUp);
+                break;
+        }
+        
     }
-    return db<dc ? b : c;
+
 }
 
 int readPNG(char path[],RGBA **image,uint16_t *width, uint16_t *height){
@@ -86,44 +116,18 @@ int readPNG(char path[],RGBA **image,uint16_t *width, uint16_t *height){
 
     uint8_t bytesPerPixel = header.bitsPerPixel/8;
     bytesPerPixel = bytesPerPixel==0? 1:bytesPerPixel;
-    //add one to account for the filter byte
-    uint16_t bytesPerScanline = 1 + (bytesPerPixel*header.width);
 
     printf("bd:%d x%d,%d",header.bitDepth,header.valuesPerPixel,bytesPerPixel);
-
+    uint8_t *prior = NULL;
     for (uint16_t row = 0;row<header.height;row++){
         uint8_t filter = uncompressed[imgPtr/8];
         imgPtr += 8;
         //printf("filter row %d: %d\n",row,filter);
-        size_t scanline = (imgPtr/8);
         //reverse the filter
-        for (uint16_t i = 0; i < bytesPerScanline-1;i++){
-            uint8_t left = 0,up = 0,leftUp = 0;
-            if (i>0){
-                left = uncompressed[scanline-bytesPerPixel];
-            }
-            if (row > 0) {
-                up = uncompressed[scanline-bytesPerScanline];
-            }
-            if (row > 0 && i > 0) {
-                leftUp = uncompressed[scanline-bytesPerScanline-bytesPerPixel];
-            }
-            switch (filter){
-                case 1: //sub
-                    uncompressed[scanline] += left;
-                    break;
-                case 2: //up
-                    uncompressed[scanline] += up;
-                    break;
-                case 3: //average
-                    uncompressed[scanline] += (up+left)/2;
-                    break;
-                case 4: //paeth
-                    uncompressed[scanline] += paeth(left,up,leftUp);
-                    break;
-            }
-            scanline++;
-        }
+        uint8_t *scanline = &(uncompressed[imgPtr/8]);
+        unfilter(filter,prior,scanline,bytesPerPixel,header.width);
+        prior = scanline;
+        
         //read the pixel data
         for (uint16_t i = 0; i < header.width;i++){
             if (usePallate){
@@ -131,8 +135,6 @@ int readPNG(char path[],RGBA **image,uint16_t *width, uint16_t *height){
                 (*image)[pixel].r = color.r;
                 (*image)[pixel].g = color.g;
                 (*image)[pixel].b = color.b;
-                //printf("%d | PLTE[%x]: ",pixel,getBitsMSB(uncompressed,imgPtr,header.bitDepth));
-                //printf("%d %d %d\n",(*image)[pixel].r,(*image)[pixel].g,(*image)[pixel].b);
                 imgPtr+=header.bitDepth;
                 pixel++;
                 continue;
@@ -144,7 +146,6 @@ int readPNG(char path[],RGBA **image,uint16_t *width, uint16_t *height){
                 imgPtr+=header.bitDepth;
                 (*image)[pixel].b = getBitsMSB(uncompressed,imgPtr,header.bitDepth);
                 imgPtr+=header.bitDepth;
-                //printf("%d %d %d\n",(*image)[pixel].r,(*image)[pixel].g,(*image)[pixel].b);
             }
             if (header.colorType >= 6){
                 (*image)[pixel].a = getBitsMSB(uncompressed,imgPtr,header.bitDepth);
