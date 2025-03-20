@@ -13,9 +13,7 @@ see http://www.libpng.org/pub/png/spec/1.2/PNG-Structure.html for details
 
 PNG chunks are handled in the pngChunks.h and c files
 */
-
-
-int readPNG(char path[]){
+int readPNG(char path[],RGBA **image,uint16_t *width, uint16_t *height){
     uint8_t* rawData;
     size_t size;
     
@@ -68,14 +66,15 @@ int readPNG(char path[]){
     uint64_t imgPtr = 0;
     printf("bd:%d x%d\n",header.bitDepth,header.valuesPerPixel);
 
-
     imgPtr = 0;
     uint32_t pixel = 0;
-    RGBA *image = calloc(uncompressedSize,sizeof(RGBA));
+    *image = calloc(header.width*header.height,sizeof(RGBA));
+    *width = header.width;
+    *height = header.height;
 
     for (int i = 0; i < uncompressedSize;i++){
         //f_b(uncompressed[i],8);
-        printf("%d ",uncompressed[i]);
+        //printf("%d ",uncompressed[i]);
     }
     printf("\n");
 
@@ -87,24 +86,27 @@ int readPNG(char path[]){
         for (uint16_t i = 0; i < header.width;i++){
             if (usePallate){
                 RGB8 color = pallate.colors[getBitsMSB(uncompressed,imgPtr,header.bitDepth)];
-                image[pixel].r = color.r;
-                image[pixel].g = color.g;
-                image[pixel].b = color.b;
-                printf("PLTE[%x]: ",getBitsMSB(uncompressed,imgPtr,header.bitDepth));
-                printf("%d %d %d\n",image[pixel].r,image[pixel].g,image[pixel].b);
+                (*image)[pixel].r = color.r;
+                (*image)[pixel].g = color.g;
+                (*image)[pixel].b = color.b;
+                //printf("%d | PLTE[%x]: ",pixel,getBitsMSB(uncompressed,imgPtr,header.bitDepth));
+                //printf("%d %d %d\n",(*image)[pixel].r,(*image)[pixel].g,(*image)[pixel].b);
                 imgPtr+=header.bitDepth;
                 pixel++;
                 continue;
             }
-            if (header.colorType == 2){
-                image[pixel].r = getBitsMSB(uncompressed,imgPtr,header.bitDepth);
+            if (header.colorType == 2 || header.colorType == 6){
+                (*image)[pixel].r = getBitsMSB(uncompressed,imgPtr,header.bitDepth);
                 imgPtr+=header.bitDepth;
-                image[pixel].g = getBitsMSB(uncompressed,imgPtr,header.bitDepth);
+                (*image)[pixel].g = getBitsMSB(uncompressed,imgPtr,header.bitDepth);
                 imgPtr+=header.bitDepth;
-                image[pixel].b = getBitsMSB(uncompressed,imgPtr,header.bitDepth);
+                (*image)[pixel].b = getBitsMSB(uncompressed,imgPtr,header.bitDepth);
                 imgPtr+=header.bitDepth;
-                printf("%d %d %d\n",image[pixel].r,image[pixel].g,image[pixel].b);
-                pixel++;
+                //printf("%d %d %d\n",(*image)[pixel].r,(*image)[pixel].g,(*image)[pixel].b);
+            }
+            if (header.colorType == 6){
+                (*image)[pixel].a = getBitsMSB(uncompressed,imgPtr,header.bitDepth);
+                imgPtr+=header.bitDepth;
             }
             switch (filter){
                 case 0:
@@ -128,6 +130,7 @@ int readPNG(char path[]){
                     break;
                 }
             }
+            pixel++;
         }
         if (imgPtr%8 != 0){
             imgPtr = (imgPtr/8 + 1)*8;
@@ -135,7 +138,6 @@ int readPNG(char path[]){
     }
     
 
-    free(image);
     free(uncompressed);
     free(data.buffer);
     free(rawData);
