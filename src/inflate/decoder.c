@@ -292,7 +292,7 @@ int inflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
         ptr += 3;
 
         //printf("isLast : %d\n",isLast);
-        printf("blockType : %d\n",blockType);
+        //printf("blockType : %d\n",blockType);
 
         if (blockType==3){
             return -3;//invalid blocktype

@@ -13,6 +13,21 @@ see http://www.libpng.org/pub/png/spec/1.2/PNG-Structure.html for details
 
 PNG chunks are handled in the pngChunks.h and c files
 */
+
+uint8_t paeth(uint8_t a,uint8_t b,uint8_t c){
+    uint8_t p = a+b-c;
+    uint16_t da = (a-p)*(a-p);
+    uint16_t db = (b-p)*(b-p);
+    uint16_t dc = (c-p)*(c-p);
+    
+    if (da < db){
+        if (da < dc){
+            return a;
+        }
+    }
+    return db<dc ? b : c;
+}
+
 int readPNG(char path[],RGBA **image,uint16_t *width, uint16_t *height){
     uint8_t* rawData;
     size_t size;
@@ -62,27 +77,54 @@ int readPNG(char path[],RGBA **image,uint16_t *width, uint16_t *height){
     size_t uncompressedSize = 0;
 
     printf("inflate exited with code %d\n",inflate(&uncompressed,&uncompressedSize,data.buffer,data.size));
-    printf("bytestream size %lu\n",uncompressedSize);
-    uint64_t imgPtr = 0;
-    printf("bd:%d x%d\n",header.bitDepth,header.valuesPerPixel);
 
-    imgPtr = 0;
+    uint64_t imgPtr = 0;
     uint32_t pixel = 0;
     *image = calloc(header.width*header.height,sizeof(RGBA));
     *width = header.width;
     *height = header.height;
 
-    for (int i = 0; i < uncompressedSize;i++){
-        //f_b(uncompressed[i],8);
-        //printf("%d ",uncompressed[i]);
-    }
-    printf("\n");
+    uint8_t bytesPerPixel = header.bitsPerPixel/8;
+    bytesPerPixel = bytesPerPixel==0? 1:bytesPerPixel;
+    //add one to account for the filter byte
+    uint16_t bytesPerScanline = 1 + (bytesPerPixel*header.width);
 
-    //header.heightx
-    for (uint16_t row = 0;row<2;row++){
+    printf("bd:%d x%d,%d",header.bitDepth,header.valuesPerPixel,bytesPerPixel);
+
+    for (uint16_t row = 0;row<header.height;row++){
         uint8_t filter = uncompressed[imgPtr/8];
         imgPtr += 8;
-        printf("filter row %d: %d\n",row,filter);
+        //printf("filter row %d: %d\n",row,filter);
+        size_t scanline = (imgPtr/8);
+        //reverse the filter
+        for (uint16_t i = 0; i < bytesPerScanline-1;i++){
+            uint8_t left = 0,up = 0,leftUp = 0;
+            if (i>0){
+                left = uncompressed[scanline-bytesPerPixel];
+            }
+            if (row > 0) {
+                up = uncompressed[scanline-bytesPerScanline];
+            }
+            if (row > 0 && i > 0) {
+                leftUp = uncompressed[scanline-bytesPerScanline-bytesPerPixel];
+            }
+            switch (filter){
+                case 1: //sub
+                    uncompressed[scanline] += left;
+                    break;
+                case 2: //up
+                    uncompressed[scanline] += up;
+                    break;
+                case 3: //average
+                    uncompressed[scanline] += (up+left)/2;
+                    break;
+                case 4: //paeth
+                    uncompressed[scanline] += paeth(left,up,leftUp);
+                    break;
+            }
+            scanline++;
+        }
+        //read the pixel data
         for (uint16_t i = 0; i < header.width;i++){
             if (usePallate){
                 RGB8 color = pallate.colors[getBitsMSB(uncompressed,imgPtr,header.bitDepth)];
@@ -104,34 +146,13 @@ int readPNG(char path[],RGBA **image,uint16_t *width, uint16_t *height){
                 imgPtr+=header.bitDepth;
                 //printf("%d %d %d\n",(*image)[pixel].r,(*image)[pixel].g,(*image)[pixel].b);
             }
-            if (header.colorType == 6){
+            if (header.colorType >= 6){
                 (*image)[pixel].a = getBitsMSB(uncompressed,imgPtr,header.bitDepth);
                 imgPtr+=header.bitDepth;
             }
-            switch (filter){
-                case 0:
-                {
-                    break;
-                }
-                case 1:
-                {
-                    break;
-                }
-                case 2:
-                {
-                    break;
-                }
-                case 3:
-                {
-                    break;
-                }
-                case 4:
-                {
-                    break;
-                }
-            }
             pixel++;
         }
+
         if (imgPtr%8 != 0){
             imgPtr = (imgPtr/8 + 1)*8;
         }
