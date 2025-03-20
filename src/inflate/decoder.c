@@ -423,7 +423,6 @@ int inflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
 
                 } else {
                     //literal
-                    printf(" %d ",code);
                     ringBufferWrite(code,slidingWindow,&slidingWindowWrite,slidingWindowSize);
                     appendToBuffer(code,out,&allocatedOutput,outputLength);
                 }
