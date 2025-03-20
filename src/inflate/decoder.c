@@ -264,12 +264,18 @@ int inflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
     if (slidingWindow == NULL){
         return -4; //sliding window allocation failed
     }
-
-    printf("Compression Method: %d\n",compressionMethod);
-    printf("Compression Info: %d\n",compressionInfo);
-    printf("Compression Uses Dict: %d\n",hasDict);
-    printf("Compression Level: %d\n",compressionLevel);
-    printf("Valid: %d\n",isValid);
+    if (!isValid){
+        return -7; //stream header had invalid checksum
+    }
+    if (compressionMethod != 8){
+        return -4; //stream header specified invalid compression method
+    }
+    if (hasDict){
+        return -5; //stream contains dictionary
+    }
+    if (compressionInfo > 7){
+        return -6; // stream header specified invalid sliding window size
+    }
 
     uint8_t color = 0;
 
@@ -289,9 +295,6 @@ int inflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
         isLast = getBitsLSB(src,ptr,1);
         uint8_t blockType = getBitsLSB(src,ptr+1,2);
         ptr += 3;
-
-        //printf("isLast : %d\n",isLast);
-        //printf("blockType : %d\n",blockType);
 
         if (blockType==3){
             return -3;//invalid blocktype
@@ -407,16 +410,6 @@ int inflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                     uint32_t distance = getBitsLSB(src,ptr,extraBitsDistance) + EXTRA_BITS_DISTANCE_OFFSET[distanceCode];
                     
                     ptr += extraBitsDistance;
-
-                    //appendToBuffer(27,out,&allocatedOutput,outputLength);
-                    //appendToBuffer('[',out,&allocatedOutput,outputLength);
-                    //appendToBuffer('3',out,&allocatedOutput,outputLength);
-                    //appendToBuffer(49+color++,out,&allocatedOutput,outputLength);
-                    //color %= 5;
-                    //appendToBuffer(';',out,&allocatedOutput,outputLength);
-                    //appendToBuffer('4',out,&allocatedOutput,outputLength);
-                    //appendToBuffer('m',out,&allocatedOutput,outputLength);
-
                     //LZSS  backreferencing
                     for (int i = 0; i < length;i++){
                         //repeat literal
@@ -425,10 +418,6 @@ int inflate(uint8_t **out,size_t *outputLength,uint8_t *src,size_t srcLength){
                         ringBufferWrite(repeat,slidingWindow,&slidingWindowWrite,slidingWindowSize);
                         appendToBuffer(repeat,out,&allocatedOutput,outputLength);
                     }
-                    //appendToBuffer(27,out,&allocatedOutput,outputLength);
-                    //appendToBuffer('[',out,&allocatedOutput,outputLength);
-                    //appendToBuffer('0',out,&allocatedOutput,outputLength);
-                    //appendToBuffer('m',out,&allocatedOutput,outputLength);
 
                 } else {
                     //literal
