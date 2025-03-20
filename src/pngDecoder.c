@@ -29,14 +29,14 @@ void unfilter(uint8_t filter,uint8_t *prior,uint8_t *current,uint8_t bytesPerPix
 
     for (uint16_t i = 0; i < (width*bytesPerPixel);i++){
         uint8_t left = 0,up = 0,leftUp = 0;
-        if (i>0){
-            left = current[i-1];
+        if (i>=bytesPerPixel){
+            left = current[i-bytesPerPixel];
         }
         if (prior != NULL) {
             up = prior[i];
         }
-        if (prior != NULL && i > 0) {
-            leftUp = prior[i-1];
+        if (prior != NULL && i >= bytesPerPixel) {
+            leftUp = prior[i-bytesPerPixel];
         }
         
         switch (filter){
