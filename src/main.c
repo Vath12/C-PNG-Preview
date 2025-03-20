@@ -45,23 +45,25 @@ int main(int argc, char *argv[]){
             i++;
         }
     }
-    float aspectRatio = (float)h/(float)w;
+    float aspectRatio = (float)w/(float)h;
     int displayCount = 0;
     SDL_DisplayID *displays  = SDL_GetDisplays(&displayCount);
     if (displayCount <= 0){
         printf("failed to get display information\n");
         return -1;
     }
-    /*
+    
     const SDL_DisplayMode *displayInfo = SDL_GetCurrentDisplayMode(displays[0]);
+
     SDL_SetWindowAspectRatio(window,aspectRatio,aspectRatio);
+
     SDL_SetWindowMinimumSize(window,100,100*aspectRatio);
-    if (w>=h && aspectRatio > 0){
-        SDL_SetWindowMaximumSize(window,displayInfo->w,displayInfo->w*aspectRatio);
+    if (w >= h && aspectRatio > 0){
+        SDL_SetWindowMaximumSize(window,displayInfo->w,displayInfo->w/aspectRatio);
     } else {
-        SDL_SetWindowMaximumSize(window,displayInfo->h/aspectRatio,displayInfo->h);
+        SDL_SetWindowMaximumSize(window,displayInfo->h*aspectRatio,displayInfo->h);
     }
-    */
+    
 
     uint8_t run = 1;
     while (run){
@@ -80,8 +82,7 @@ int main(int argc, char *argv[]){
         SDL_Rect screenRect = {0,0,screen->w,screen->h};
         SDL_FillSurfaceRect(screen,&screenRect,(Uint32) -1);
         SDL_Rect dst = {0,0,800,800};
-        //SDL_BlitSurfaceScaled(img,NULL,screen,&dst,SDL_SCALEMODE_NEAREST);
-        SDL_BlitSurface(img,NULL,screen,&dst);
+        SDL_BlitSurface(img,NULL,screen,NULL);
         SDL_UpdateWindowSurface(window);
     }
 
